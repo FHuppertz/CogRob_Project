@@ -3,73 +3,64 @@ import pybullet_data
 import time
 import numpy as np
 
-# Connect to simulation
-p.connect(p.GUI)
-p.setGravity(0, 0, -9.8)
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
+class Simulation():
+    def __init__(self):
+        # Connect to simulation
+        p.connect(p.GUI)
+        p.setGravity(0, 0, -9.8)
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-# Load ground
-p.loadURDF("plane.urdf")
+        # Load ground
+        p.loadURDF("plane.urdf")
 
-# Create mobile base (cube)
-base_size = [0.4, 0.4, 0.2]
-base_start_pos = [0.0, 0.0, base_size[2] / 2]
-base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[s/2 for s in base_size])
-base_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=[s/2 for s in base_size])
-base_id = p.createMultiBody(baseMass=1.0, baseCollisionShapeIndex=base_collision,
-                            baseVisualShapeIndex=base_visual, basePosition=base_start_pos)
+        # Create mobile base (cube)
+        base_size = [0.7, 0.7, 0.3]
+        base_start_pos = [0.0, 0.0, base_size[2] / 2]
+        base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[s/2 for s in base_size])
+        base_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=[s/2 for s in base_size])
+        self.base_id = p.createMultiBody(baseMass=10.0, baseCollisionShapeIndex=base_collision,
+                                baseVisualShapeIndex=base_visual, basePosition=base_start_pos)
 
-# Load robot arm on top of base
-robot_height = base_size[2]  # cube height
-robot_id = p.loadURDF("kuka_iiwa/model.urdf", base_start_pos, useFixedBase=True)
+        # Load robot arm on top of base
+        self.robot_id = p.loadURDF("kuka_iiwa/model.urdf", base_start_pos, useFixedBase=True)
+        p.setCollisionFilterPair(self.robot_id, self.base_id, -1, -1, 0)
 
-# Define target positions (world frame)
-target_positions = [[1.0, 0.0, 0.5], [0.5, 0.5, 0.5]]
 
-def move_base_toward(current_pos, target_pos, step_size=0.01):
-    """Move base gradually toward target."""
-    diff = np.array(target_pos) - np.array(current_pos)
-    dist = np.linalg.norm(diff)
-    if dist < step_size:
-        return target_pos, True  # Close enough
-    direction = diff / dist
-    new_pos = np.array(current_pos) + direction * step_size
-    return new_pos.tolist(), False
+        # Test Cube
+        half_size = [0.1,0.1,0.1]
+        cube_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=half_size)
+        cube_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
+        self.cube_id = p.createMultiBody(baseMass=1.0, baseCollisionShapeIndex=cube_collision,
+                                         baseVisualShapeIndex=cube_visual, basePosition=[1.0,0.0,0.1])
 
-for target in target_positions:
-    print(f"Moving toward: {target}")
-    target_xy = target[:2]
-    end_eff_z = target[2]
+    def Move_To(self, target):
+        # Attach Arm to base
+        pos, ori = p.getBasePositionAndOrientation(self.base_id)
+        p.resetBasePositionAndOrientation(self.robot_id, np.array(pos)+np.array([0.0,0.0,0.3]), ori) # QuickFix
 
-    done = False
-    while not done:
-        # Get current base position
-        base_pos, _ = p.getBasePositionAndOrientation(base_id)
-
-        # Compute new base position
-        new_xy, done = move_base_toward(base_pos[:2], target_xy)
-
-        # Update base and robot position
-        new_base_pos = [*new_xy, base_size[2] / 2]
-        p.resetBasePositionAndOrientation(base_id, new_base_pos, [0, 0, 0, 1])
-        p.resetBasePositionAndOrientation(robot_id, new_base_pos, [0, 0, 0, 1])
-
-        # Compute relative target for arm IK
-        relative_target = [
-            target[0] - new_base_pos[0],
-            target[1] - new_base_pos[1],
-            target[2] - new_base_pos[2]
-        ]
-        joint_angles = p.calculateInverseKinematics(robot_id, 6, relative_target)
+    def Grab_X(self, target_id):
+        target_pos, target_ori = p.getBasePositionAndOrientation(target_id)
+        joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
 
         # Apply joint positions
         for i, angle in enumerate(joint_angles):
-            p.setJointMotorControl2(robot_id, i, p.POSITION_CONTROL, targetPosition=angle)
+            p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL, targetPosition=angle)
 
-        # Step simulation
-        p.stepSimulation()
-        time.sleep(0.01)
+    def Simulate(self, steps):
+        for _ in range(steps):
+            self.Move_To(0)
+            self.Grab_X(self.cube_id)
+            p.stepSimulation()
+            time.sleep(0.01)
 
-# Disconnect
+
+## TODO!!!!
+# Motion of Base
+# Fix QuickFix orientation
+# Actual grabbing
+
+
+
+Sim = Simulation()
+Sim.Simulate(100000)
 p.disconnect()
-
