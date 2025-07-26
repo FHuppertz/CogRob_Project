@@ -43,7 +43,7 @@ class Simulation():
         half_size = [0.1,0.1,0.1]
         cube_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=half_size)
         cube_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
-        self.cube_id = p.createMultiBody(baseMass=1.0, baseCollisionShapeIndex=cube_collision,
+        self.cube_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=cube_collision,
                                          baseVisualShapeIndex=cube_visual, basePosition=[1.0,0.0,0.1])
 
 
@@ -107,7 +107,18 @@ class Simulation():
             ee_pos = ee_state[4]  # position in world frame
 
             dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
-            if dist < 0.2:
+            if dist < 0.25:
+                # Fix this wierdness
+                constraint_id = p.createConstraint(
+                    parentBodyUniqueId=self.robot_id,
+                    parentLinkIndex=6,
+                    childBodyUniqueId=target_id,
+                    childLinkIndex=-1,
+                    jointType=p.JOINT_FIXED,
+                    jointAxis=[0, 0, 0],
+                    parentFramePosition=ee_pos,
+                    childFramePosition=target_pos
+                )
                 return 'success'
 
             # Apply joint positions
@@ -134,4 +145,5 @@ class Simulation():
 Sim = Simulation()
 print(Sim.Move_To([1,-1]))
 print(Sim.Grab_X(Sim.cube_id))
+Sim.Simulate(10000)
 p.disconnect()
