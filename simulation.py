@@ -10,6 +10,14 @@ class Simulation():
         p.setGravity(0, 0, -9.8)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
+        # Place the camera above the origin, looking straight down
+        p.resetDebugVisualizerCamera(
+            cameraDistance=5.0,         # How high above the scene (zoom level)
+            cameraYaw=0,                # Yaw doesn't matter much when looking straight down
+            cameraPitch=-45,#-89.999,       # Almost -90° for top-down (can't be exactly -90°)
+            cameraTargetPosition=[0, 0, 0]  # Look at the center of the world
+        )
+
         # Load ground
         p.loadURDF("plane.urdf")
 
@@ -102,13 +110,29 @@ class Simulation():
             joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
 
             # Get end-effector position
-            ee_link_index = 6  # For KUKA iiwa, link 6 is typically the end-effector
-            ee_state = p.getLinkState(self.robot_id, ee_link_index)
-            ee_pos = ee_state[4]  # position in world frame
+            ee_index = 6
+            # Get gripper pose
+            ee_pos, ee_ori = p.getLinkState(self.robot_id, ee_index)[4:6]
 
             dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
             if dist < 0.25:
-                # Fix this wierdness
+                offset = np.array([0, 0, 0.25])
+                # Contraints to simulate grabbing (modified ChatGPT)
+                p.resetBasePositionAndOrientation(
+                    target_id,
+                    np.array(ee_pos)+offset,
+                    target_ori
+                )
+
+                # Transform from parent world frame to parent local frame
+                parent_inv_pos, parent_inv_ori = p.invertTransform(ee_pos, ee_ori)
+
+                # Compute child pose relative to parent
+                rel_pos, rel_ori = p.multiplyTransforms(
+                    parent_inv_pos, parent_inv_ori,
+                    np.array(ee_pos)+offset, target_ori
+                )
+                # Create contraint as grab
                 constraint_id = p.createConstraint(
                     parentBodyUniqueId=self.robot_id,
                     parentLinkIndex=6,
@@ -116,18 +140,44 @@ class Simulation():
                     childLinkIndex=-1,
                     jointType=p.JOINT_FIXED,
                     jointAxis=[0, 0, 0],
-                    parentFramePosition=ee_pos,
-                    childFramePosition=target_pos
+                    parentFramePosition=rel_pos,
+                    childFramePosition=[0, 0, 0],
+                    parentFrameOrientation=rel_ori,
+                    childFrameOrientation=[0, 0, 0, 1]
                 )
+
+                p.changeConstraint(constraint_id, maxForce=500, erp=1.0)
+
+                # TODO: Make Gripper move up (Better)
+                pos, _ = p.getBasePositionAndOrientation(self.robot_id)
+                pos = np.array(pos)
+                target_pos = np.array(ee_pos) + offset
+                diff = target_pos - pos
+
+                joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+0.5*diff+3*offset)
+                for i, angle in enumerate(joint_angles):
+                    p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL, 
+                                            targetPosition=angle,
+                                            force=500,
+                                            positionGain=0.03,
+                                            velocityGain=1.0,
+                                            maxVelocity=2.0
+                    )
                 return 'success'
 
-            # Apply joint positions
             for i, angle in enumerate(joint_angles):
-                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL, targetPosition=angle)
+                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL, 
+                                        targetPosition=angle,
+                                        force=500,
+                                        positionGain=0.03,
+                                        velocityGain=1.0,
+                                        maxVelocity=2.0
+                )
 
             self.Simulate(1)
 
         return 'failure'
+
 
     def Simulate(self, steps):
         for _ in range(steps):
