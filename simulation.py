@@ -33,6 +33,8 @@ class Simulation():
         # Adjust start position to be on top of the cube base
         robot_start_pos = [base_start_pos[0], base_start_pos[1], base_size[2]]
         self.robot_id = p.loadURDF("kuka_iiwa/model_2.urdf", robot_start_pos, useFixedBase=False)
+
+        self.constraint_id = None
         
         p.resetBasePositionAndOrientation(self.robot_id, robot_start_pos,[0.0,0.0,0.0,1.0])
         # Attach arm to base using fixed constraint
@@ -102,8 +104,6 @@ class Simulation():
         ) 
         return 'failure'
 
-
-
     def Grab_X(self, target_id):
         for _ in range(1000):
             target_pos, target_ori = p.getBasePositionAndOrientation(target_id)
@@ -133,7 +133,7 @@ class Simulation():
                     np.array(ee_pos)+offset, target_ori
                 )
                 # Create contraint as grab
-                constraint_id = p.createConstraint(
+                self.constraint_id = p.createConstraint(
                     parentBodyUniqueId=self.robot_id,
                     parentLinkIndex=6,
                     childBodyUniqueId=target_id,
@@ -146,7 +146,7 @@ class Simulation():
                     childFrameOrientation=[0, 0, 0, 1]
                 )
 
-                p.changeConstraint(constraint_id, maxForce=500, erp=1.0)
+                p.changeConstraint(self.constraint_id, maxForce=500, erp=1.0)
 
                 # TODO: Make Gripper move up (Better)
                 pos, _ = p.getBasePositionAndOrientation(self.robot_id)
@@ -154,7 +154,7 @@ class Simulation():
                 target_pos = np.array(ee_pos) + offset
                 diff = target_pos - pos
 
-                joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+0.5*diff+3*offset)
+                joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+0.5*diff+3*offset) # Fix moving up
                 for i, angle in enumerate(joint_angles):
                     p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL, 
                                             targetPosition=angle,
@@ -177,7 +177,7 @@ class Simulation():
             self.Simulate(1)
 
         return 'failure'
-
+ 
 
     def Simulate(self, steps):
         for _ in range(steps):
@@ -185,15 +185,86 @@ class Simulation():
             time.sleep(0.01)
 
 
-## TODO!!!!
-# Motion of Base
-# Fix QuickFix orientation
-# Actual grabbing
+
+### World representation
+class Location():
+    def __init__(self, center):
+        self.center = np.array(center)
+        self.neighbours = []
+
+    def Next_To(self, neighbours):
+        for neighbour in neighbours:
+            if neighbour not in self.neighbours:
+                self.neighbours.append(neighbour)
+                neighbour.Next_To([self])
+
+## Locations:
+Door = Location([0,0])
+LivingRoom = Location([2,0])
+Fridge = Location([1,-2])
+Stove = Location([3,-2])
+TV = Location([1,2])
+
+# Location Relations:
+Door.Next_To([LivingRoom, Fridge, TV])
+LivingRoom.Next_To([TV, Door, Fridge, Stove])
+Fridge.Next_To([Door, LivingRoom, Stove])
+Stove.Next_To([Fridge, LivingRoom])
+TV.Next_To([Door, LivingRoom])
+
+# Path Finder
+class Node():
+    def __init__(self, location):
+        self.location = location
+        self.f = 0
+        self.g = 0
+        self.path = []
+
+def Path_From_To(start, end):
+    goal = False
+    checked = [start]
+    frontier = []
+
+    current_Node = Node(start)
+    frontier.append(current_Node)
+
+    while frontier != [] and not goal:
+        frontier.sort(key=lambda x: x.f)
+        current_Node = frontier.pop(0)
+
+        for neigh in current_Node.location.neighbours:
+            if neigh not in checked:
+                # Goal check
+                if neigh == end:
+                    goal = True
+                    current_Node.path.append(end.center)
+                    return current_Node.path
+                checked.append(neigh)
+        
+                # Add new location to frontier and calcualte its f value
+                next_Node = Node(neigh)
+                next_Node.path = current_Node.path.copy()
+                next_Node.path.append(neigh.center)
+                next_Node.g = current_Node.g + np.linalg.norm(next_Node.location.center - current_Node.location.center)
+                next_Node.f = next_Node.g + np.linalg.norm(end.center - neigh.center)
+
+                frontier.append(next_Node)
+
+    return []
 
 
+print(Path_From_To(Door, Stove))
 
+# TODO: 
+# Motion of Base (A* missing)
+# Actual grabbing (kinda done)
+
+
+#'''
 Sim = Simulation()
-print(Sim.Move_To([1,-1]))
-print(Sim.Grab_X(Sim.cube_id))
+for way_point in Path_From_To(Door, Stove):
+    print(Sim.Move_To(way_point))
+
 Sim.Simulate(10000)
 p.disconnect()
+#'''
