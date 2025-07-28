@@ -200,7 +200,7 @@ class Location():
 
 ## Locations:
 Door = Location([0,0])
-LivingRoom = Location([2,0])
+LivingRoom = Location([3,0])
 Fridge = Location([1,-2])
 Stove = Location([3,-2])
 TV = Location([1,2])
@@ -262,7 +262,11 @@ print(Path_From_To(Door, Stove))
 
 #'''
 Sim = Simulation()
+print(Sim.Grab_X(Sim.cube_id))
 for way_point in Path_From_To(Door, Stove):
+    print(Sim.Move_To(way_point))
+
+for way_point in Path_From_To(Stove, TV):
     print(Sim.Move_To(way_point))
 
 Sim.Simulate(10000)
