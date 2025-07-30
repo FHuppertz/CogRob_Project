@@ -3,6 +3,8 @@ import pybullet_data
 import time
 import numpy as np
 
+from typing import Optional
+
 class Simulation():
     def __init__(self):
         # Connect to simulation
@@ -35,10 +37,11 @@ class Simulation():
         self.robot_id = p.loadURDF("kuka_iiwa/model_2.urdf", robot_start_pos, useFixedBase=False)
 
         self.constraint_id = None
-        
+        self.held_object_id = None
+
         p.resetBasePositionAndOrientation(self.robot_id, robot_start_pos,[0.0,0.0,0.0,1.0])
         # Attach arm to base using fixed constraint
-        constraint_id = p.createConstraint(
+        p.createConstraint(
             parentBodyUniqueId=self.base_id,
             parentLinkIndex=-1,
             childBodyUniqueId=self.robot_id,
@@ -56,9 +59,13 @@ class Simulation():
         self.cube_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=cube_collision,
                                          baseVisualShapeIndex=cube_visual, basePosition=[1.0,0.0,0.1])
 
+        # Add cube to objects dictionary
+        global OBJECTS
+        OBJECTS["cube"] = self.cube_id
+
 
     def Move_To(self, target):
-        for _ in range(1000): 
+        for _ in range(1000):
             target_vec = np.zeros(3)
             target_vec[0] = target[0]
             target_vec[1] = target[1]
@@ -73,16 +80,16 @@ class Simulation():
 
             if dist < 0.1:
                 p.resetBaseVelocity(
-                    self.base_id, 
-                    linearVelocity=[0,0,0], 
+                    self.base_id,
+                    linearVelocity=[0,0,0],
                     angularVelocity=[0, 0, 0]
-                ) 
+                )
                 return 'success'
-            
+
             v = 3 * goal_vec/dist
             p.resetBaseVelocity(
-                self.base_id, 
-                linearVelocity=v, 
+                self.base_id,
+                linearVelocity=v,
                 angularVelocity=[0, 0, 0]
             )
 
@@ -98,13 +105,31 @@ class Simulation():
 
 
         p.resetBaseVelocity(
-            self.base_id, 
-            linearVelocity=[0,0,0], 
+            self.base_id,
+            linearVelocity=[0,0,0],
             angularVelocity=[0, 0, 0]
-        ) 
+        )
         return 'failure'
 
-    def Grab_X(self, target_id):
+    def Grab_X(self, target_name_or_id):
+        """
+        Grab an object by name or ID.
+
+        Args:
+            target_name_or_id: Either a string name of an object or a direct object ID
+
+        Returns:
+            str: 'success' if grabbing was successful, 'failure' otherwise
+        """
+        # Handle both object names and direct IDs
+        if isinstance(target_name_or_id, str):
+            target_id = OBJECTS.get(target_name_or_id.lower())
+            if target_id is None:
+                print(f"Object '{target_name_or_id}' not found in OBJECTS dictionary")
+                return 'failure'
+        else:
+            target_id = target_name_or_id
+
         for _ in range(1000):
             target_pos, target_ori = p.getBasePositionAndOrientation(target_id)
             joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
@@ -156,17 +181,18 @@ class Simulation():
 
                 joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+0.5*diff+3*offset) # Fix moving up
                 for i, angle in enumerate(joint_angles):
-                    p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL, 
+                    p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
                                             targetPosition=angle,
                                             force=500,
                                             positionGain=0.03,
                                             velocityGain=1.0,
                                             maxVelocity=2.0
                     )
+                self.held_object_id = target_id
                 return 'success'
 
             for i, angle in enumerate(joint_angles):
-                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL, 
+                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
                                         targetPosition=angle,
                                         force=500,
                                         positionGain=0.03,
@@ -177,19 +203,96 @@ class Simulation():
             self.Simulate(1)
 
         return 'failure'
- 
+
 
     def Simulate(self, steps):
         for _ in range(steps):
             p.stepSimulation()
             time.sleep(0.01)
 
+    def Place_Object(self, target_name_or_position):
+        """
+        Place the currently grabbed object at a location or position.
+
+        Args:
+            target_name_or_position: Either a string name of a location or [x, y, z] coordinates
+
+        Returns:
+            str: 'success' if placement was successful, 'failure' otherwise
+        """
+        # Handle both location names and direct positions
+        if isinstance(target_name_or_position, str):
+            location = find_location_by_name(target_name_or_position)
+            if location is None:
+                print(f"Location '{target_name_or_position}' not found")
+                return 'failure'
+            target_position = location.place_position
+        else:
+            target_position = target_name_or_position
+
+        # Check if we're actually holding something
+        if self.constraint_id is None:
+            return 'failure'
+
+        # Position above the target to ensure safe placement
+        placement_pos = np.array(target_position)
+        placement_pos[2] += 0.2  # Place slightly above the target
+
+        # Move arm to placement position
+        for _ in range(1000):
+            joint_angles = p.calculateInverseKinematics(self.robot_id, 6, placement_pos)
+
+            # Apply joint angles
+            for i, angle in enumerate(joint_angles):
+                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                        targetPosition=angle,
+                                        force=500,
+                                        positionGain=0.03,
+                                        velocityGain=1.0,
+                                        maxVelocity=2.0)
+
+            # Check if we're close enough to the target position
+            ee_pos, _ = p.getLinkState(self.robot_id, 6)[4:6]
+            dist = np.linalg.norm(np.array(placement_pos) - np.array(ee_pos))
+
+            if dist < 0.1:
+                # Remove the constraint to release the object
+                p.removeConstraint(self.constraint_id)
+                self.constraint_id = None
+
+                # Teleport the object to the exact target position
+                p.resetBasePositionAndOrientation(self.held_object_id, target_position, [0,0,0,1])
+
+                # Move arm slightly up to ensure release
+                lift_pos = placement_pos.copy()
+                lift_pos[2] += 0.1
+
+                # Move to lift position
+                lift_joint_angles = p.calculateInverseKinematics(self.robot_id, 6, lift_pos)
+                for i, angle in enumerate(lift_joint_angles):
+                    p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                            targetPosition=angle,
+                                            force=500,
+                                            positionGain=0.03,
+                                            velocityGain=1.0,
+                                            maxVelocity=2.0)
+
+                self.Simulate(100)  # Brief simulation to settle
+                return 'success'
+
+            self.Simulate(1)
+
+        return 'failure'
+
 
 
 ### World representation
 class Location():
-    def __init__(self, center):
+    def __init__(self, name, center, place_position=None):
+        self.name = name
         self.center = np.array(center)
+        # Default place position is slightly offset from center
+        self.place_position = np.array(place_position) if place_position is not None else np.array([center[0], center[1], 0.5])
         self.neighbours = []
 
     def Next_To(self, neighbours):
@@ -199,11 +302,23 @@ class Location():
                 neighbour.Next_To([self])
 
 ## Locations:
-Door = Location([0,0])
-LivingRoom = Location([3,0])
-Fridge = Location([1,-2])
-Stove = Location([3,-2])
-TV = Location([1,2])
+Door = Location("Door", [0,0], [0.0, 0.0, 0.5])
+LivingRoom = Location("LivingRoom", [3,0], [3.0, 0.0, 0.5])
+Fridge = Location("Fridge", [1,-2], [1.0, -2.0, 0.5])
+Stove = Location("Stove", [3,-2], [3.0, -2.0, 0.5])
+TV = Location("TV", [1,2], [1.0, 2.5, 0.5])
+
+# Object dictionary - maps object names to their IDs in the simulation
+OBJECTS = {}
+
+# World representation - dictionary of all locations by name (lowercase keys)
+WORLD = {
+    "door": Door,
+    "livingroom": LivingRoom,
+    "fridge": Fridge,
+    "stove": Stove,
+    "tv": TV
+}
 
 # Location Relations:
 Door.Next_To([LivingRoom, Fridge, TV])
@@ -213,6 +328,19 @@ Stove.Next_To([Fridge, LivingRoom])
 TV.Next_To([Door, LivingRoom])
 
 # Path Finder
+def find_location_by_name(name: str) -> Optional[Location]:
+    """
+    Find a location in the world by its name (case-insensitive).
+
+    Args:
+        name (str): The name of the location to find
+
+    Returns:
+        Location: The location object with the matching name, or None if not found
+    """
+    # Convert name to lowercase for consistent lookup
+    return WORLD.get(name.lower())
+
 class Node():
     def __init__(self, location):
         self.location = location
@@ -220,7 +348,13 @@ class Node():
         self.g = 0
         self.path = []
 
-def Path_From_To(start, end):
+def Path_From_To(start_name, end_name):
+    start = find_location_by_name(start_name)
+    end = find_location_by_name(end_name)
+
+    if start is None or end is None:
+        return []
+
     goal = False
     checked = [start]
     frontier = []
@@ -240,7 +374,7 @@ def Path_From_To(start, end):
                     current_Node.path.append(end.center)
                     return current_Node.path
                 checked.append(neigh)
-        
+
                 # Add new location to frontier and calcualte its f value
                 next_Node = Node(neigh)
                 next_Node.path = current_Node.path.copy()
@@ -253,21 +387,23 @@ def Path_From_To(start, end):
     return []
 
 
-print(Path_From_To(Door, Stove))
+print(Path_From_To("door", "stove"))
 
-# TODO: 
+# TODO:
 # Motion of Base (A* missing)
 # Actual grabbing (kinda done)
 
 
 #'''
 Sim = Simulation()
-print(Sim.Grab_X(Sim.cube_id))
-for way_point in Path_From_To(Door, Stove):
+print(Sim.Grab_X("cube"))
+for way_point in Path_From_To("door", "stove"):
     print(Sim.Move_To(way_point))
 
-for way_point in Path_From_To(Stove, TV):
+for way_point in Path_From_To("stove", "tv"):
     print(Sim.Move_To(way_point))
+
+print(Sim.Place_Object("tv"))
 
 Sim.Simulate(10000)
 p.disconnect()
