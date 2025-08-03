@@ -1,4 +1,5 @@
 import numpy as np
+import pybullet as p
 
 from typing import Dict, List, Optional
 
@@ -117,3 +118,21 @@ class World():
         world.add_next_to("tv", ["door", "livingroom"])
 
         return world
+
+    def create_default_physical_objects(self):
+        """Create physical objects in the PyBullet simulation.
+        This should be called after PyBullet has been initialized."""
+
+        # Create test cube
+        half_size = [0.1, 0.1, 0.1]
+        cube_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=half_size)
+        cube_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
+        cube_id = p.createMultiBody(baseMass=0.01,
+                                   baseCollisionShapeIndex=cube_collision,
+                                   baseVisualShapeIndex=cube_visual,
+                                   basePosition=[1.0, 0.0, 0.1])
+
+        # Add cube to world objects
+        self.add_object(cube_id, "cube")
+
+        return self.objects
