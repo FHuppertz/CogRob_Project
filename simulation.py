@@ -1,17 +1,38 @@
-import numpy as np
 import pybullet as p
 import pybullet_data
 import time
 
-from world import World, Location
+from world import World
+from robot import Robot
 
 
-class Simulation():
-    def __init__(self, world=None):
-        # Connect to simulation
-        p.connect(p.GUI)
+class TimeStepController:
+    def __init__(self, dt=0.01, real_time=True):
+        self.dt = dt
+        self.real_time = real_time
+        self.last_step_time = time.time()
+
+    def step(self):
+        if self.real_time:
+            current_time = time.time()
+            sleep_time = self.dt - (current_time - self.last_step_time)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            self.last_step_time = time.time()
+        else:
+            # Run as fast as possible
+            time.sleep(self.dt)
+
+class SimulationEnvironment:
+    def __init__(self, world):
+        # Initialize PyBullet
+        self.physics_client = p.connect(p.GUI)
         p.setGravity(0, 0, -9.8)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+        # Initialize timing and simulation components
+        self.time_controller = TimeStepController()
+        self.subscribers = []
 
         # Place the camera above the origin, looking straight down
         p.resetDebugVisualizerCamera(
@@ -21,316 +42,64 @@ class Simulation():
             cameraTargetPosition=[0, 0, 0]  # Look at the center of the world
         )
 
-        # Load ground
+        # Load ground plane
         p.loadURDF("plane.urdf")
 
-        # Create mobile base (cube)
-        base_size = [0.7, 0.7, 0.3]
-        base_start_pos = [0.0, 0.0, base_size[2] / 2]
-        base_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=[s/2 for s in base_size])
-        base_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=[s/2 for s in base_size])
-        self.base_id = p.createMultiBody(baseMass=1000.0, baseCollisionShapeIndex=base_collision,
-                                    baseVisualShapeIndex=base_visual, basePosition=base_start_pos)
+        # Set up world
+        self.world = world
 
-        # Load robot arm on top of base
-        # Adjust start position to be on top of the cube base
-        robot_start_pos = [base_start_pos[0], base_start_pos[1], base_size[2]]
-        self.robot_id = p.loadURDF("kuka_iiwa/model_2.urdf", robot_start_pos, useFixedBase=False)
+    def add_subscriber(self, subscriber):
+        """Add a component that needs to be notified of simulation steps."""
+        self.subscribers.append(subscriber)
 
-        self.constraint_id = None
-        self.held_object_id = None
+    def remove_subscriber(self, subscriber):
+        """Remove a component from the simulation updates."""
+        if subscriber in self.subscribers:
+            self.subscribers.remove(subscriber)
 
-        p.resetBasePositionAndOrientation(self.robot_id, robot_start_pos,[0.0,0.0,0.0,1.0])
-        # Attach arm to base using fixed constraint
-        p.createConstraint(
-            parentBodyUniqueId=self.base_id,
-            parentLinkIndex=-1,
-            childBodyUniqueId=self.robot_id,
-            childLinkIndex=-1,
-            jointType=p.JOINT_FIXED,
-            jointAxis=[0, 0, 0],
-            parentFramePosition=robot_start_pos,
-            childFramePosition=base_start_pos
-        )
+    def _notify_subscribers(self, event_type):
+        """Notify all subscribers of a simulation event."""
+        for subscriber in self.subscribers:
+            if hasattr(subscriber, f'on_{event_type}'):
+                getattr(subscriber, f'on_{event_type}')()
 
-        # Test Cube
-        half_size = [0.1,0.1,0.1]
-        cube_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=half_size)
-        cube_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
-        cube_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=cube_collision,
-                                         baseVisualShapeIndex=cube_visual, basePosition=[1.0,0.0,0.1])
+    def step(self, num_steps=1):
+        """Advance the simulation by the specified number of steps."""
+        for _ in range(num_steps):
+            # Pre-physics updates
+            self._notify_subscribers('pre_step')
 
-        # Use provided world or create a default one
-        if world is None:
-            self.world = self._create_default_world()
-        else:
-            self.world = world
-
-        # Add cube to world objects
-        self.world.add_object(cube_id, "cube")
-
-    def _create_default_world(self):
-        """Create a default world with predefined locations and relationships."""
-        world = World()
-
-        # Create locations using the new Location class
-        door = Location("Door", [0,0], [0.0, 0.0, 0.5])
-        living_room = Location("LivingRoom", [3,0], [3.0, 0.0, 0.5])
-        fridge = Location("Fridge", [1,-2], [1.0, -2.0, 0.5])
-        stove = Location("Stove", [3,-2], [3.0, -2.0, 0.5])
-        tv = Location("TV", [1,2], [1.0, 2.5, 0.5])
-
-        # Add locations to world
-        world.add_location(door)
-        world.add_location(living_room)
-        world.add_location(fridge)
-        world.add_location(stove)
-        world.add_location(tv)
-
-        # Set up location relationships using the world's add_next_to method
-        world.add_next_to("door", ["livingroom", "fridge", "tv"])
-        world.add_next_to("livingroom", ["tv", "door", "fridge", "stove"])
-        world.add_next_to("fridge", ["door", "livingroom", "stove"])
-        world.add_next_to("stove", ["fridge", "livingroom"])
-        world.add_next_to("tv", ["door", "livingroom"])
-
-        return world
-
-    def Move_To(self, target):
-        for _ in range(1000):
-            target_vec = np.zeros(3)
-            target_vec[0] = target[0]
-            target_vec[1] = target[1]
-
-            pos, ori = p.getBasePositionAndOrientation(self.base_id)
-            pos = np.array(pos)
-            ori = np.array(ori)
-
-            goal_vec = target_vec - pos
-            goal_vec[2] = 0
-            dist = np.linalg.norm(goal_vec)
-
-            if dist < 0.1:
-                p.resetBaseVelocity(
-                    self.base_id,
-                    linearVelocity=[0,0,0],
-                    angularVelocity=[0, 0, 0]
-                )
-                return 'success'
-
-            v = 3 * goal_vec/dist
-            p.resetBaseVelocity(
-                self.base_id,
-                linearVelocity=v,
-                angularVelocity=[0, 0, 0]
-            )
-
-            pos, ori = p.getBasePositionAndOrientation(self.base_id)
-            pos = np.array(pos)
-            ori = np.array(ori)
-
-            goal_vec = target_vec - pos
-            goal_vec[2] = 0
-            dist = np.linalg.norm(goal_vec)
-
-            self.Simulate(1)
-
-        p.resetBaseVelocity(
-            self.base_id,
-            linearVelocity=[0,0,0],
-            angularVelocity=[0, 0, 0]
-        )
-        return 'failure'
-
-    def Grab_X(self, target_name_or_id):
-        """
-        Grab an object by name or ID.
-
-        Args:
-            target_name_or_id: Either a string name of an object or a direct object ID
-
-        Returns:
-            str: 'success' if grabbing was successful, 'failure' otherwise
-        """
-        # Handle both object names and direct IDs
-        if isinstance(target_name_or_id, str):
-            target_id = self.world.get_object(target_name_or_id)
-            if target_id is None:
-                print(f"Object '{target_name_or_id}' not found in world objects")
-                return 'failure'
-        else:
-            target_id = target_name_or_id
-
-        for _ in range(1000):
-            target_pos, target_ori = p.getBasePositionAndOrientation(target_id)
-            joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
-
-            # Get end-effector position
-            ee_index = 6
-            # Get gripper pose
-            ee_pos, ee_ori = p.getLinkState(self.robot_id, ee_index)[4:6]
-
-            dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
-            if dist < 0.25:
-                offset = np.array([0, 0, 0.25])
-                # Contraints to simulate grabbing (modified ChatGPT)
-                p.resetBasePositionAndOrientation(
-                    target_id,
-                    np.array(ee_pos)+offset,
-                    target_ori
-                )
-
-                # Transform from parent world frame to parent local frame
-                parent_inv_pos, parent_inv_ori = p.invertTransform(ee_pos, ee_ori)
-
-                # Compute child pose relative to parent
-                rel_pos, rel_ori = p.multiplyTransforms(
-                    parent_inv_pos, parent_inv_ori,
-                    np.array(ee_pos)+offset, target_ori
-                )
-                # Create contraint as grab
-                self.constraint_id = p.createConstraint(
-                    parentBodyUniqueId=self.robot_id,
-                    parentLinkIndex=6,
-                    childBodyUniqueId=target_id,
-                    childLinkIndex=-1,
-                    jointType=p.JOINT_FIXED,
-                    jointAxis=[0, 0, 0],
-                    parentFramePosition=rel_pos,
-                    childFramePosition=[0, 0, 0],
-                    parentFrameOrientation=rel_ori,
-                    childFrameOrientation=[0, 0, 0, 1]
-                )
-
-                p.changeConstraint(self.constraint_id, maxForce=500, erp=1.0)
-
-                # TODO: Make Gripper move up (Better)
-                pos, _ = p.getBasePositionAndOrientation(self.robot_id)
-                pos = np.array(pos)
-                target_pos = np.array(ee_pos) + offset
-                diff = target_pos - pos
-
-                joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+0.5*diff+3*offset) # Fix moving up
-                for i, angle in enumerate(joint_angles):
-                    p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
-                                            targetPosition=angle,
-                                            force=500,
-                                            positionGain=0.03,
-                                            velocityGain=1.0,
-                                            maxVelocity=2.0
-                    )
-                self.held_object_id = target_id
-                return 'success'
-
-            for i, angle in enumerate(joint_angles):
-                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
-                                        targetPosition=angle,
-                                        force=500,
-                                        positionGain=0.03,
-                                        velocityGain=1.0,
-                                        maxVelocity=2.0
-                )
-
-            self.Simulate(1)
-
-        return 'failure'
-
-    def Simulate(self, steps):
-        for _ in range(steps):
+            # Physics step
             p.stepSimulation()
-            time.sleep(0.01)
 
-    def Place_Object(self, target_name_or_position):
-        """
-        Place the currently grabbed object at a location or position.
+            # Post-physics updates
+            self._notify_subscribers('post_step')
 
-        Args:
-            target_name_or_position: Either a string name of a location or [x, y, z] coordinates
+            # Control timing
+            self.time_controller.step()
 
-        Returns:
-            str: 'success' if placement was successful, 'failure' otherwise
-        """
-        # Handle both location names and direct positions
-        if isinstance(target_name_or_position, str):
-            location = self.world.get_location(target_name_or_position)
-            if location is None:
-                print(f"Location '{target_name_or_position}' not found")
-                return 'failure'
-            target_position = location.place_position
-        else:
-            target_position = target_name_or_position
-
-        # Check if we're actually holding something
-        if self.constraint_id is None:
-            return 'failure'
-
-        # Position above the target to ensure safe placement
-        placement_pos = np.array(target_position)
-        placement_pos[2] += 0.2  # Place slightly above the target
-
-        # Move arm to placement position
-        for _ in range(1000):
-            joint_angles = p.calculateInverseKinematics(self.robot_id, 6, placement_pos)
-
-            # Apply joint angles
-            for i, angle in enumerate(joint_angles):
-                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
-                                        targetPosition=angle,
-                                        force=500,
-                                        positionGain=0.03,
-                                        velocityGain=1.0,
-                                        maxVelocity=2.0)
-
-            # Check if we're close enough to the target position
-            ee_pos, _ = p.getLinkState(self.robot_id, 6)[4:6]
-            dist = np.linalg.norm(np.array(placement_pos) - np.array(ee_pos))
-
-            if dist < 0.1:
-                # Remove the constraint to release the object
-                p.removeConstraint(self.constraint_id)
-                self.constraint_id = None
-
-                # Teleport the object to the exact target position
-                p.resetBasePositionAndOrientation(self.held_object_id, target_position, [0,0,0,1])
-
-                # Move arm slightly up to ensure release
-                lift_pos = placement_pos.copy()
-                lift_pos[2] += 0.1
-
-                # Move to lift position
-                lift_joint_angles = p.calculateInverseKinematics(self.robot_id, 6, lift_pos)
-                for i, angle in enumerate(lift_joint_angles):
-                    p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
-                                            targetPosition=angle,
-                                            force=500,
-                                            positionGain=0.03,
-                                            velocityGain=1.0,
-                                            maxVelocity=2.0)
-
-                self.Simulate(100)  # Brief simulation to settle
-                return 'success'
-
-            self.Simulate(1)
-
-        return 'failure'
+    def disconnect(self):
+        """Clean up and disconnect from PyBullet."""
+        p.disconnect(self.physics_client)
 
 
-# Test the path finding functionality
 if __name__ == "__main__":
-    # Run simulation with the default world
-    sim = Simulation(world=None)
-    print(sim.Grab_X("cube"))
+    # Create a simulation environment
+    world = World.create_default_world()
+    sim = SimulationEnvironment(world)
 
-    # Use the world's path finding method
-    for way_point in sim.world.get_path_between("door", "stove"):
-        print(f"Moving to {way_point}")
-        print(sim.Move_To(way_point))
+    # Add a subscriber (e.g., a robot)
+    robot = Robot(sim)
+    sim.add_subscriber(robot)
 
-    for way_point in sim.world.get_path_between("stove", "tv"):
-        print(f"Moving to {way_point}")
-        print(sim.Move_To(way_point))
+    # Run the simulation
+    sim.step(100)
 
-    print(sim.Place_Object("tv"))
+    # Give robot a move command
+    robot.move_to("tv")
 
-    sim.Simulate(10000)
-    p.disconnect()
+    # Step the simulation again
+    sim.step(100)
+
+    # Disconnect from PyBullet
+    sim.disconnect()
