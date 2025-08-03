@@ -87,6 +87,7 @@ if __name__ == "__main__":
     # Create a simulation environment
     world = World.create_default_world()
     sim = SimulationEnvironment(world)
+    sim.world.create_default_physical_objects()
 
     # Add a subscriber (e.g., a robot)
     robot = Robot(sim)
@@ -95,8 +96,16 @@ if __name__ == "__main__":
     # Run the simulation
     sim.step(100)
 
-    # Give robot a move command
-    robot.move_to("tv")
+    # Give the robot commands
+    robot.grab("cube")
+
+    for way_point in sim.world.get_path_between("door", "stove"):
+        print(f"Moving to {way_point}")
+        print(robot.move_to(way_point))
+
+    for way_point in sim.world.get_path_between("stove", "tv"):
+        print(f"Moving to {way_point}")
+        print(robot.move_to(way_point))
 
     # Step the simulation again
     sim.step(100)
