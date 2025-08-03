@@ -323,9 +323,11 @@ if __name__ == "__main__":
 
     # Use the world's path finding method
     for way_point in sim.world.get_path_between("door", "stove"):
+        print(f"Moving to {way_point}")
         print(sim.Move_To(way_point))
 
     for way_point in sim.world.get_path_between("stove", "tv"):
+        print(f"Moving to {way_point}")
         print(sim.Move_To(way_point))
 
     print(sim.Place_Object("tv"))

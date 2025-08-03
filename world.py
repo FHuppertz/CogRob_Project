@@ -1,17 +1,21 @@
 import numpy as np
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class Location():
-    def __init__(self, name, center, place_position=None):
+    def __init__(self,
+                 name: str,
+                 center: List[float],
+                 place_position: Optional[List[float]] = None
+            ):
         self.name = name
         self.center = np.array(center)
         # Default place position is slightly offset from center
         self.place_position = np.array(place_position) if place_position is not None else np.array([center[0], center[1], 0.5])
         self.neighbours = []
 
-    def next_to(self, neighbours):
+    def next_to(self, neighbours: List['Location']) -> None:
         for neighbour in neighbours:
             if neighbour not in self.neighbours:
                 self.neighbours.append(neighbour)
@@ -19,7 +23,7 @@ class Location():
 
 
 class PlannerNode():
-    def __init__(self, location: Location):
+    def __init__(self, location: 'Location'):
         self.location = location
         self.f = 0
         self.g = 0
@@ -31,25 +35,25 @@ class World():
         self.locations: Dict[str, Location] = {}
         self.objects: Dict[str, int] = {}
 
-    def add_location(self, location: Location):
+    def add_location(self, location: Location) -> None:
         self.locations[location.name.lower()] = location
 
-    def add_next_to(self, location: str, neighbours: List[str]):
+    def add_next_to(self, location: str, neighbours: List[str]) -> None:
         self.locations[location.lower()].next_to([self.locations[neighbour.lower()] for neighbour in neighbours])
         for neighbour in neighbours:
             neighbour_location = self.locations[neighbour.lower()]
             neighbour_location.next_to([self.locations[location.lower()]])
 
-    def get_location(self, name):
+    def get_location(self, name: str) -> Optional[Location]:
         return self.locations.get(name.lower())
 
-    def add_object(self, object_id: int, name: str):
-            self.objects[name.lower()] = object_id
+    def add_object(self, object_id: int, name: str) -> None:
+        self.objects[name.lower()] = object_id
 
-    def get_object(self, name):
+    def get_object(self, name: str) -> Optional[int]:
         return self.objects.get(name.lower())
 
-    def get_path_between(self, start_name, end_name):
+    def get_path_between(self, start_name: str, end_name: str) -> List[List[float]]:
         start = self.get_location(start_name)
         end = self.get_location(end_name)
 
