@@ -1,12 +1,13 @@
+import numpy as np
 import pybullet as p
 import pybullet_data
 import time
-import numpy as np
 
-from typing import Optional
+from world import World, Location
+
 
 class Simulation():
-    def __init__(self):
+    def __init__(self, world=None):
         # Connect to simulation
         p.connect(p.GUI)
         p.setGravity(0, 0, -9.8)
@@ -56,13 +57,44 @@ class Simulation():
         half_size = [0.1,0.1,0.1]
         cube_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=half_size)
         cube_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
-        self.cube_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=cube_collision,
+        cube_id = p.createMultiBody(baseMass=0.01, baseCollisionShapeIndex=cube_collision,
                                          baseVisualShapeIndex=cube_visual, basePosition=[1.0,0.0,0.1])
 
-        # Add cube to objects dictionary
-        global OBJECTS
-        OBJECTS["cube"] = self.cube_id
+        # Use provided world or create a default one
+        if world is None:
+            self.world = self._create_default_world()
+        else:
+            self.world = world
 
+        # Add cube to world objects
+        self.world.add_object(cube_id, "cube")
+
+    def _create_default_world(self):
+        """Create a default world with predefined locations and relationships."""
+        world = World()
+
+        # Create locations using the new Location class
+        door = Location("Door", [0,0], [0.0, 0.0, 0.5])
+        living_room = Location("LivingRoom", [3,0], [3.0, 0.0, 0.5])
+        fridge = Location("Fridge", [1,-2], [1.0, -2.0, 0.5])
+        stove = Location("Stove", [3,-2], [3.0, -2.0, 0.5])
+        tv = Location("TV", [1,2], [1.0, 2.5, 0.5])
+
+        # Add locations to world
+        world.add_location(door)
+        world.add_location(living_room)
+        world.add_location(fridge)
+        world.add_location(stove)
+        world.add_location(tv)
+
+        # Set up location relationships using the world's add_next_to method
+        world.add_next_to("door", ["livingroom", "fridge", "tv"])
+        world.add_next_to("livingroom", ["tv", "door", "fridge", "stove"])
+        world.add_next_to("fridge", ["door", "livingroom", "stove"])
+        world.add_next_to("stove", ["fridge", "livingroom"])
+        world.add_next_to("tv", ["door", "livingroom"])
+
+        return world
 
     def Move_To(self, target):
         for _ in range(1000):
@@ -103,7 +135,6 @@ class Simulation():
 
             self.Simulate(1)
 
-
         p.resetBaseVelocity(
             self.base_id,
             linearVelocity=[0,0,0],
@@ -123,9 +154,9 @@ class Simulation():
         """
         # Handle both object names and direct IDs
         if isinstance(target_name_or_id, str):
-            target_id = OBJECTS.get(target_name_or_id.lower())
+            target_id = self.world.get_object(target_name_or_id)
             if target_id is None:
-                print(f"Object '{target_name_or_id}' not found in OBJECTS dictionary")
+                print(f"Object '{target_name_or_id}' not found in world objects")
                 return 'failure'
         else:
             target_id = target_name_or_id
@@ -204,7 +235,6 @@ class Simulation():
 
         return 'failure'
 
-
     def Simulate(self, steps):
         for _ in range(steps):
             p.stepSimulation()
@@ -222,7 +252,7 @@ class Simulation():
         """
         # Handle both location names and direct positions
         if isinstance(target_name_or_position, str):
-            location = find_location_by_name(target_name_or_position)
+            location = self.world.get_location(target_name_or_position)
             if location is None:
                 print(f"Location '{target_name_or_position}' not found")
                 return 'failure'
@@ -285,126 +315,20 @@ class Simulation():
         return 'failure'
 
 
+# Test the path finding functionality
+if __name__ == "__main__":
+    # Run simulation with the default world
+    sim = Simulation(world=None)
+    print(sim.Grab_X("cube"))
 
-### World representation
-class Location():
-    def __init__(self, name, center, place_position=None):
-        self.name = name
-        self.center = np.array(center)
-        # Default place position is slightly offset from center
-        self.place_position = np.array(place_position) if place_position is not None else np.array([center[0], center[1], 0.5])
-        self.neighbours = []
+    # Use the world's path finding method
+    for way_point in sim.world.get_path_between("door", "stove"):
+        print(sim.Move_To(way_point))
 
-    def Next_To(self, neighbours):
-        for neighbour in neighbours:
-            if neighbour not in self.neighbours:
-                self.neighbours.append(neighbour)
-                neighbour.Next_To([self])
+    for way_point in sim.world.get_path_between("stove", "tv"):
+        print(sim.Move_To(way_point))
 
-## Locations:
-Door = Location("Door", [0,0], [0.0, 0.0, 0.5])
-LivingRoom = Location("LivingRoom", [3,0], [3.0, 0.0, 0.5])
-Fridge = Location("Fridge", [1,-2], [1.0, -2.0, 0.5])
-Stove = Location("Stove", [3,-2], [3.0, -2.0, 0.5])
-TV = Location("TV", [1,2], [1.0, 2.5, 0.5])
+    print(sim.Place_Object("tv"))
 
-# Object dictionary - maps object names to their IDs in the simulation
-OBJECTS = {}
-
-# World representation - dictionary of all locations by name (lowercase keys)
-WORLD = {
-    "door": Door,
-    "livingroom": LivingRoom,
-    "fridge": Fridge,
-    "stove": Stove,
-    "tv": TV
-}
-
-# Location Relations:
-Door.Next_To([LivingRoom, Fridge, TV])
-LivingRoom.Next_To([TV, Door, Fridge, Stove])
-Fridge.Next_To([Door, LivingRoom, Stove])
-Stove.Next_To([Fridge, LivingRoom])
-TV.Next_To([Door, LivingRoom])
-
-# Path Finder
-def find_location_by_name(name: str) -> Optional[Location]:
-    """
-    Find a location in the world by its name (case-insensitive).
-
-    Args:
-        name (str): The name of the location to find
-
-    Returns:
-        Location: The location object with the matching name, or None if not found
-    """
-    # Convert name to lowercase for consistent lookup
-    return WORLD.get(name.lower())
-
-class Node():
-    def __init__(self, location):
-        self.location = location
-        self.f = 0
-        self.g = 0
-        self.path = []
-
-def Path_From_To(start_name, end_name):
-    start = find_location_by_name(start_name)
-    end = find_location_by_name(end_name)
-
-    if start is None or end is None:
-        return []
-
-    goal = False
-    checked = [start]
-    frontier = []
-
-    current_Node = Node(start)
-    frontier.append(current_Node)
-
-    while frontier != [] and not goal:
-        frontier.sort(key=lambda x: x.f)
-        current_Node = frontier.pop(0)
-
-        for neigh in current_Node.location.neighbours:
-            if neigh not in checked:
-                # Goal check
-                if neigh == end:
-                    goal = True
-                    current_Node.path.append(end.center)
-                    return current_Node.path
-                checked.append(neigh)
-
-                # Add new location to frontier and calcualte its f value
-                next_Node = Node(neigh)
-                next_Node.path = current_Node.path.copy()
-                next_Node.path.append(neigh.center)
-                next_Node.g = current_Node.g + np.linalg.norm(next_Node.location.center - current_Node.location.center)
-                next_Node.f = next_Node.g + np.linalg.norm(end.center - neigh.center)
-
-                frontier.append(next_Node)
-
-    return []
-
-
-print(Path_From_To("door", "stove"))
-
-# TODO:
-# Motion of Base (A* missing)
-# Actual grabbing (kinda done)
-
-
-#'''
-Sim = Simulation()
-print(Sim.Grab_X("cube"))
-for way_point in Path_From_To("door", "stove"):
-    print(Sim.Move_To(way_point))
-
-for way_point in Path_From_To("stove", "tv"):
-    print(Sim.Move_To(way_point))
-
-print(Sim.Place_Object("tv"))
-
-Sim.Simulate(10000)
-p.disconnect()
-#'''
+    sim.Simulate(10000)
+    p.disconnect()
