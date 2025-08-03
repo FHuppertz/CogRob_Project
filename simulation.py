@@ -94,7 +94,7 @@ if __name__ == "__main__":
     sim.add_subscriber(robot)
 
     # Run the simulation
-    sim.step(100)
+    sim.step(200)
 
     # Give the robot commands
     robot.grab("cube")
@@ -107,8 +107,11 @@ if __name__ == "__main__":
         print(f"Moving to {way_point}")
         print(robot.move_to(way_point))
 
+    # Place the cube at the tv location
+    robot.place("tv")
+
     # Step the simulation again
-    sim.step(100)
+    sim.step(1000)
 
     # Disconnect from PyBullet
     sim.disconnect()
