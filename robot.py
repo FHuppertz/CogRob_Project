@@ -38,8 +38,8 @@ class Robot:
         self.held_object_id = None
 
         # Movement state
-        self.current_target = None
-        self.movement_active = False
+        self.action_target = None
+        self.activity = set()
 
     def move_to(self, target):
         """
@@ -64,32 +64,33 @@ class Robot:
             target_pos = np.array(target)
 
         # Set up movement state
-        self.current_target = np.array([target_pos[0], target_pos[1], 0])
-        self.movement_active = True
+        self.action_target = np.array([target_pos[0], target_pos[1], 0])
+        self.activity.add("move")
 
         # Run simulation until we reach the target or timeout
         for _ in range(1000):
-            if not self.movement_active:
+            if not "move" in self.activity:
                 return 'success'
             self.env.step(1)
 
         # Timeout - stop movement
-        self.movement_active = False
+        self.activity.remove("move")
+        self.action_target = None
         p.resetBaseVelocity(
             self.base_id,
             linearVelocity=[0, 0, 0],
             angularVelocity=[0, 0, 0]
         )
-        return 'failure'
 
     def handle_move(self):
-        assert self.movement_active and self.current_target is not None
+        assert "move" in self.activity and self.action_target is not None
+        # Need to assert that action_target is a numpy array or list of length 3
 
         pos, ori = p.getBasePositionAndOrientation(self.base_id)
         pos = np.array(pos)
 
         # Calculate direction to target
-        goal_vec = self.current_target - pos
+        goal_vec = self.action_target - pos
         goal_vec[2] = 0  # Keep movement in XY plane
         dist = np.linalg.norm(goal_vec)
 
@@ -100,8 +101,8 @@ class Robot:
                 linearVelocity=[0, 0, 0],
                 angularVelocity=[0, 0, 0]
             )
-            self.movement_active = False
-            self.current_target = None
+            self.activity.remove("move")
+            self.action_target = None
         else:
             # Move towards target
             v = 3 * goal_vec / dist
@@ -111,9 +112,123 @@ class Robot:
                 angularVelocity=[0, 0, 0]
             )
 
+    def grab(self, target_name_or_id):
+        """
+        Grab an object by name or ID. Initiates grabbing through setting the
+        target object and activating the grab state. Grabbing is handled by
+        on_pre_step, which is called when env.step() is called.
+
+        Args:
+            target_name_or_id: Either a string name of an object or a direct object ID
+
+        Returns:
+            str: 'success' if grabbing was successful, 'failure' otherwise
+        """
+        # Handle both object names and direct IDs
+        if isinstance(target_name_or_id, str):
+            target_id = self.env.world.get_object(target_name_or_id)
+            if target_id is None:
+                print(f"Object '{target_name_or_id}' not found in world objects")
+                return 'failure'
+        else:
+            target_id = target_name_or_id
+
+        # Set up grab state
+        self.action_target = target_id
+        self.activity.add("grab")
+
+        # Run simulation until we grab the object or timeout
+        for _ in range(1000):
+            if not "grab" in self.activity:
+                return 'success'
+            self.env.step(1)
+
+        # Timeout - failed to grab
+        self.activity.remove("grab")
+        self.action_target = None
+
+        return 'failure'
+
+    def handle_grab(self):
+        assert "grab" in self.activity and self.action_target is not None
+        assert type(self.action_target) is int
+
+        target_pos, target_ori = p.getBasePositionAndOrientation(self.action_target)
+        joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
+
+        # Get end-effector position
+        ee_index = 6
+        # Get gripper pose
+        ee_pos, ee_ori = p.getLinkState(self.robot_id, ee_index)[4:6]
+
+        dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
+        if dist < 0.25:
+            offset = np.array([0, 0, 0.25])
+            # Constraints to simulate grabbing (modified ChatGPT)
+            p.resetBasePositionAndOrientation(
+                self.action_target,
+                np.array(ee_pos)+offset,
+                target_ori
+            )
+
+            # Transform from parent world frame to parent local frame
+            parent_inv_pos, parent_inv_ori = p.invertTransform(ee_pos, ee_ori)
+
+            # Compute child pose relative to parent
+            rel_pos, rel_ori = p.multiplyTransforms(
+                parent_inv_pos, parent_inv_ori,
+                np.array(ee_pos)+offset, target_ori
+            )
+            # Create constraint as grab
+            self.constraint_id = p.createConstraint(
+                parentBodyUniqueId=self.robot_id,
+                parentLinkIndex=6,
+                childBodyUniqueId=self.action_target,
+                childLinkIndex=-1,
+                jointType=p.JOINT_FIXED,
+                jointAxis=[0, 0, 0],
+                parentFramePosition=rel_pos,
+                childFramePosition=[0, 0, 0],
+                parentFrameOrientation=rel_ori,
+                childFrameOrientation=[0, 0, 0, 1]
+            )
+
+            p.changeConstraint(self.constraint_id, maxForce=500, erp=1.0)
+
+            # Move Gripper up
+            pos, _ = p.getBasePositionAndOrientation(self.robot_id)
+            pos = np.array(pos)
+            target_pos = np.array(ee_pos) + offset
+            diff = target_pos - pos
+
+            joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+0.5*diff+3*offset) # Fix moving up
+            for i, angle in enumerate(joint_angles):
+                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                        targetPosition=angle,
+                                        force=500,
+                                        positionGain=0.03,
+                                        velocityGain=1.0,
+                                        maxVelocity=2.0
+                )
+            self.held_object_id = self.action_target
+            self.activity.remove("grab")
+            self.action_target = None
+        else:
+            # Move arm towards target
+            for i, angle in enumerate(joint_angles):
+                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                        targetPosition=angle,
+                                        force=500,
+                                        positionGain=0.03,
+                                        velocityGain=1.0,
+                                        maxVelocity=2.0
+                )
+
     def on_pre_step(self):
-        if self.movement_active and self.current_target is not None:
+        if "move" in self.activity and self.action_target is not None:
             self.handle_move()
+        if "grab" in self.activity and self.action_target is not None:
+            self.handle_grab()
 
     def on_post_step(self):
         # Handle any post-physics updates
