@@ -90,3 +90,30 @@ class World():
                     frontier.append(next_Node)
 
         return []
+
+    @classmethod
+    def create_default_world(cls):
+        world = cls()
+
+        # Create locations using the new Location class
+        door = Location("Door", [0,0], [0.0, 0.0, 0.5])
+        living_room = Location("LivingRoom", [3,0], [3.0, 0.0, 0.5])
+        fridge = Location("Fridge", [1,-2], [1.0, -2.0, 0.5])
+        stove = Location("Stove", [3,-2], [3.0, -2.0, 0.5])
+        tv = Location("TV", [1,2], [1.0, 2.5, 0.5])
+
+        # Add locations to world
+        world.add_location(door)
+        world.add_location(living_room)
+        world.add_location(fridge)
+        world.add_location(stove)
+        world.add_location(tv)
+
+        # Set up location relationships using the world's add_next_to method
+        world.add_next_to("door", ["livingroom", "fridge", "tv"])
+        world.add_next_to("livingroom", ["tv", "door", "fridge", "stove"])
+        world.add_next_to("fridge", ["door", "livingroom", "stove"])
+        world.add_next_to("stove", ["fridge", "livingroom"])
+        world.add_next_to("tv", ["door", "livingroom"])
+
+        return world
