@@ -224,11 +224,104 @@ class Robot:
                                         maxVelocity=2.0
                 )
 
+    def place(self, target_name_or_position):
+        """
+        Place the currently grabbed object at a location or position. Initiates
+        placement through setting the target position and activating the place state.
+        Placement is handled by on_pre_step, which is called when env.step() is called.
+
+        Args:
+            target_name_or_position: Either a string name of a location or [x, y, z] coordinates
+
+        Returns:
+            str: 'success' if placement was successful, 'failure' otherwise
+        """
+        # Handle both location names and direct positions
+        if isinstance(target_name_or_position, str):
+            location = self.env.world.get_location(target_name_or_position)
+            if location is None:
+                print(f"Location '{target_name_or_position}' not found")
+                return 'failure'
+            target_position = location.place_position
+        else:
+            target_position = target_name_or_position
+
+        # Check if we're actually holding something
+        if self.constraint_id is None:
+            return 'failure'
+
+        # Set up place state
+        self.action_target = np.array(target_position)
+        self.activity.add("place")
+
+        # Run simulation until we place the object or timeout
+        for _ in range(1000):
+            if not "place" in self.activity:
+                return 'success'
+            self.env.step(1)
+
+        # Timeout - failed to place
+        self.activity.remove("place")
+        self.action_target = None
+        return 'failure'
+
+    def handle_place(self):
+        assert "place" in self.activity and self.action_target is not None
+        assert isinstance(self.action_target, np.ndarray) and len(self.action_target) == 3
+
+        # Position above the target to ensure safe placement
+        placement_pos = self.action_target.copy()
+        placement_pos[2] += 0.2  # Place slightly above the target
+
+        # Move arm to placement position
+        joint_angles = p.calculateInverseKinematics(self.robot_id, 6, placement_pos)
+
+        # Apply joint angles
+        for i, angle in enumerate(joint_angles):
+            p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                    targetPosition=angle,
+                                    force=500,
+                                    positionGain=0.03,
+                                    velocityGain=1.0,
+                                    maxVelocity=2.0)
+
+        # Check if we're close enough to the target position
+        ee_pos, _ = p.getLinkState(self.robot_id, 6)[4:6]
+        dist = np.linalg.norm(np.array(placement_pos) - np.array(ee_pos))
+
+        if dist < 0.1:
+            # Remove the constraint to release the object
+            p.removeConstraint(self.constraint_id)
+            self.constraint_id = None
+
+            # Teleport the object to the exact target position
+            p.resetBasePositionAndOrientation(self.held_object_id, self.action_target, [0,0,0,1])
+
+            # Move arm slightly up to ensure release
+            lift_pos = placement_pos.copy()
+            lift_pos[2] += 0.1
+
+            # Move to lift position
+            lift_joint_angles = p.calculateInverseKinematics(self.robot_id, 6, lift_pos)
+            for i, angle in enumerate(lift_joint_angles):
+                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                        targetPosition=angle,
+                                        force=500,
+                                        positionGain=0.03,
+                                        velocityGain=1.0,
+                                        maxVelocity=2.0)
+
+            self.held_object_id = None
+            self.activity.remove("place")
+            self.action_target = None
+
     def on_pre_step(self):
         if "move" in self.activity and self.action_target is not None:
             self.handle_move()
         if "grab" in self.activity and self.action_target is not None:
             self.handle_grab()
+        if "place" in self.activity and self.action_target is not None:
+            self.handle_place()
 
     def on_post_step(self):
         # Handle any post-physics updates
