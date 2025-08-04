@@ -1,9 +1,13 @@
 import pybullet as p
 import numpy as np
 
+from camel.agents import ChatAgent
+
+from toolkit import RobotToolkit
+
 
 class Robot:
-    def __init__(self, simulation_env):
+    def __init__(self, simulation_env, model=None):
         self.env = simulation_env
         self.env.add_subscriber(self)
 
@@ -41,6 +45,31 @@ class Robot:
         self.action_target = None
         self.activity = set()
 
+        # Agent
+        system_message = "You are a robot assistant. Your goal is to help the user with their tasks.\n"
+        "You have the following tools available to you to assist with tasks:\n"
+        " - move_to: Move the robot base to a target location by name (str)\n"
+        " - grab: Pick up an object by name (str)\n"
+        " - place: Place the held object at the given location by name (str)\n"
+
+        if model:
+            self.toolkit = RobotToolkit(self)
+            self.chat_agent = ChatAgent(
+                system_message=system_message,
+                model=model,
+                tools=self.toolkit.get_tools(),
+            )
+        else:
+            self.toolkit = None
+            self.chat_agent = None
+
+    def invoke(self, prompt: str):
+        if self.chat_agent:
+            response = self.chat_agent.step(prompt)
+            print(f"Agent response:\n{response}")
+        else:
+            print("No chat agent available, please provide a model")
+
     def move_to(self, target):
         """
         Move the robot base to a target position. Initiates movement through
@@ -58,7 +87,10 @@ class Robot:
             location = self.env.world.get_location(target)
             if location is None:
                 print(f"Location '{target}' not found")
-                return 'failure'
+                return {
+                    'status': 'failure',
+                    'message': f"Location '{target}' not found"
+                }
             target_pos = location.center
         else:
             target_pos = np.array(target)
@@ -70,7 +102,10 @@ class Robot:
         # Run simulation until we reach the target or timeout
         for _ in range(1000):
             if not "move" in self.activity:
-                return 'success'
+                return {
+                    'status': 'success',
+                    'message': f'You successfully reached the target {target}'
+                }
             self.env.step(1)
 
         # Timeout - stop movement
@@ -81,6 +116,11 @@ class Robot:
             linearVelocity=[0, 0, 0],
             angularVelocity=[0, 0, 0]
         )
+
+        return {
+            'status': 'timeout',
+            'message': f'Timed out while moving to target {target}'
+        }
 
     def handle_move(self):
         assert "move" in self.activity and self.action_target is not None
@@ -129,7 +169,10 @@ class Robot:
             target_id = self.env.world.get_object(target_name_or_id)
             if target_id is None:
                 print(f"Object '{target_name_or_id}' not found in world objects")
-                return 'failure'
+                return {
+                    'status': 'failure',
+                    'message': f'Object "{target_name_or_id}" not found'
+                }
         else:
             target_id = target_name_or_id
 
@@ -140,14 +183,20 @@ class Robot:
         # Run simulation until we grab the object or timeout
         for _ in range(1000):
             if not "grab" in self.activity:
-                return 'success'
+                return {
+                    'status': 'success',
+                    'message': 'Object grabbed successfully'
+                }
             self.env.step(1)
 
         # Timeout - failed to grab
         self.activity.remove("grab")
         self.action_target = None
 
-        return 'failure'
+        return {
+            'status': 'timeout',
+            'message': 'Timed out trying to grab object'
+        }
 
     def handle_grab(self):
         assert "grab" in self.activity and self.action_target is not None
@@ -241,7 +290,10 @@ class Robot:
             location = self.env.world.get_location(target_name_or_position)
             if location is None:
                 print(f"Location '{target_name_or_position}' not found")
-                return 'failure'
+                return {
+                    "status": "fail",
+                    "message": f"Location '{target_name_or_position}' not found"
+                }
             target_position = location.place_position
         else:
             target_position = target_name_or_position
@@ -257,13 +309,19 @@ class Robot:
         # Run simulation until we place the object or timeout
         for _ in range(1000):
             if not "place" in self.activity:
-                return 'success'
+                return {
+                    "status": "success",
+                    "message": "Object placed successfully"
+                }
             self.env.step(1)
 
         # Timeout - failed to place
         self.activity.remove("place")
         self.action_target = None
-        return 'failure'
+        return {
+            "status": "failure",
+            "message": "Failed to place object"
+        }
 
     def handle_place(self):
         assert "place" in self.activity and self.action_target is not None
