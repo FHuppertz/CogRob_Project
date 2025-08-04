@@ -97,10 +97,10 @@ class World():
         world = cls()
 
         # Create locations using the new Location class
-        door = Location("Door", [0,0], [0.0, 0.0, 0.5])
-        living_room = Location("LivingRoom", [3,0], [3.0, 0.0, 0.5])
-        fridge = Location("Fridge", [1,-2], [1.0, -2.0, 0.5])
-        stove = Location("Stove", [3,-2], [3.0, -2.0, 0.5])
+        door = Location("Door", [0,0], [0.0, 0.5, 0.5])
+        living_room = Location("LivingRoom", [3,0], [3.0, 0.5, 0.5])
+        fridge = Location("Fridge", [1,-2], [1.0, -2.5, 0.5])
+        stove = Location("Stove", [3,-2], [3.0, -2.5, 0.5])
         tv = Location("TV", [1,2], [1.0, 2.5, 0.5])
 
         # Add locations to world
