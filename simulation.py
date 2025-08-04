@@ -1,9 +1,16 @@
+import dotenv
+import os
 import pybullet as p
 import pybullet_data
 import time
 
+from camel.models import ModelFactory
+from camel.types import ModelPlatformType, ModelType
+
 from world import World
 from robot import Robot
+
+dotenv.load_dotenv()
 
 
 class TimeStepController:
@@ -90,7 +97,16 @@ if __name__ == "__main__":
     sim.world.create_default_physical_objects()
 
     # Add a subscriber (e.g., a robot)
-    robot = Robot(sim)
+    if os.environ.get("OPENAI_API_KEY", None):
+        model = ModelFactory.create(
+          model_platform=ModelPlatformType.OPENAI,
+          model_type="gpt-4.1-mini",
+          model_config_dict={"temperature": 0.0},
+        )
+    else:
+        model = None
+
+    robot = Robot(sim, model)
     sim.add_subscriber(robot)
 
     # Run the simulation
@@ -109,6 +125,9 @@ if __name__ == "__main__":
 
     # Place the cube at the tv location
     robot.place("tv")
+
+    # Invoke the robot's agent
+    robot.invoke("Please pick up the cube, move to the door and place the cube")
 
     # Step the simulation again
     sim.step(1000)
