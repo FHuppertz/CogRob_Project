@@ -126,6 +126,9 @@ if __name__ == "__main__":
     # Place the cube at the tv location
     robot.place("tv")
 
+    # Delay before invoking the robot's agent
+    sim.step(1000)
+
     # Invoke the robot's agent
     robot.invoke("Please pick up the cube, move to the door and place the cube")
 
