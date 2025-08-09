@@ -135,4 +135,57 @@ class World():
         # Add cube to world objects
         self.add_object(cube_id, "cube")
 
+        shelf_location = np.array([1.0, 3.0, 0.0])
+
+        # Shelf plates
+        plate_dims = [0.5, 0.4, 0.02]
+        plate_pos = [
+            np.array([0, 0, 0.2])+shelf_location,  # Bottom shelf
+            np.array([0, 0, 0.6])+shelf_location,  # Middle shelf
+            np.array([0, 0, 1.0])+shelf_location   # Top shelf
+        ]
+
+        # Vertical supports
+        support_dims = [0.02, 0.4, 1.0]
+        support_pos = [
+            np.array([-0.25, 0, 0.5])+shelf_location, # Left support
+            np.array([0.25, 0, 0.5])+shelf_location   # Right support
+        ]
+
+        # Create collision shapes for the plates and supports
+        collision_box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=plate_dims)
+        collision_support_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=support_dims)
+
+        # Create a visual shape from your Blender mesh for rendering
+        # This gives the object the visual appearance of the full shelf
+
+        #REPLACE WITH MY BELNDER MESH
+        visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="path/to/your/shelf.obj", meshScale=[1, 1, 1])
+
+        # Create the multibody object
+        # The base will be the visual mesh, and the links will be the simplified collision boxes
+        shelf_body = p.createMultiBody(
+            baseMass=0,  # A mass of 0 makes the object static
+            baseCollisionShapeIndex=-1, # No collision on the base itself
+            baseVisualShapeIndex=visual_shelf_id,
+            basePosition=[0, 0, 0],
+    
+            # Add links for each collision box
+            # Each link represents a simplified collision plate or support
+            linkMasses=[0] * 5,  # Each link has no mass, as the base has the mass
+            linkCollisionShapeIndices=[
+                collision_box_id, collision_box_id, collision_box_id,  # Plates
+                collision_support_id, collision_support_id             # Supports
+            ],
+            linkVisualShapeIndices=[-1] * 5, # No separate visual for the links
+            linkPositions=plate_pos + support_pos,
+            linkOrientations=[[0,0,0,1]] * 5,
+            linkInertialFramePositions=[[0,0,0]] * 5,
+            linkInertialFrameOrientations=[[0,0,0,1]] * 5,
+            linkParentIndices=[0, 0, 0, 0, 0],  # Parent all links to the base (index 0)
+            linkJointTypes=[p.JOINT_FIXED] * 5, # Fixed joints to the base
+            linkJointAxis=[[0, 0, 0]] * 5
+        )
+        self.add_object(shelf_body, "shelf")
+
         return self.objects
