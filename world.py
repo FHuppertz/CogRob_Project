@@ -135,56 +135,68 @@ class World():
         # Add cube to world objects
         self.add_object(cube_id, "cube")
 
+        # Define the location and rotation for the entire shelf
         shelf_location = np.array([1.0, 3.0, 0.0])
+        shelf_scale = 0.25
 
-        # Shelf plates
-        plate_dims = [0.5, 0.4, 0.02]
+        shelf_orientation = p.getQuaternionFromEuler([0, 0, np.pi])
+        
+        # Collision shapes for the simplified planes (links)
+        # Define half-extents for plates and supports
+        plate_dims = np.array([3.0, 2.0, 0.02])*shelf_scale
+        support_dims_side = np.array([1/3, 2.0, 6.0])*shelf_scale
+        support_dims_back = np.array([3.0, 1/3, 6.0])*shelf_scale
+
+
         plate_pos = [
-            np.array([0, 0, 0.2])+shelf_location,  # Bottom shelf
-            np.array([0, 0, 0.6])+shelf_location,  # Middle shelf
-            np.array([0, 0, 1.0])+shelf_location   # Top shelf
+            [0, 0, 1.5*shelf_scale],  # Bottom shelf
+            [0, 0, 3.0*shelf_scale],  # Middle shelf
+            [0, 0, 4.5*shelf_scale]   # Top shelf
         ]
-
-        # Vertical supports
-        support_dims = [0.02, 0.4, 1.0]
         support_pos = [
-            np.array([-0.25, 0, 0.5])+shelf_location, # Left support
-            np.array([0.25, 0, 0.5])+shelf_location   # Right support
+            np.array([-1.5, 0, 3.0])*shelf_scale,   # Left support
+            np.array([1.5, 0, 3.0])*shelf_scale,    # Right support
+            np.array([0, -5/6, 3.0])*shelf_scale    # Back support
         ]
 
         # Create collision shapes for the plates and supports
-        collision_box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=plate_dims)
-        collision_support_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=support_dims)
+        collision_box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in plate_dims])
+        collision_support_side = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_side])
+        collision_support_back = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_back])
+        
+        empty_visual = p.createVisualShape(
+            p.GEOM_BOX,
+            halfExtents=[1,1,1],              
+            rgbaColor=[0, 0, 0, 0]     # fully transparent
+        )
 
-        # Create a visual shape from your Blender mesh for rendering
-        # This gives the object the visual appearance of the full shelf
 
-        #REPLACE WITH MY BELNDER MESH
-        visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="path/to/your/shelf.obj", meshScale=[1, 1, 1])
+        # Create the visual shape from your Blender mesh
+        visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Shelf.obj", meshScale=[shelf_scale, shelf_scale, shelf_scale])
 
         # Create the multibody object
-        # The base will be the visual mesh, and the links will be the simplified collision boxes
+        # This is where we apply the location and orientation to the base
         shelf_body = p.createMultiBody(
-            baseMass=0,  # A mass of 0 makes the object static
-            baseCollisionShapeIndex=-1, # No collision on the base itself
+            baseMass=0,
+            baseCollisionShapeIndex=-1,
             baseVisualShapeIndex=visual_shelf_id,
-            basePosition=[0, 0, 0],
-    
+            basePosition=shelf_location,            # Correctly position the entire shelf
+            baseOrientation=shelf_orientation,      # Apply the rotation here
+            
             # Add links for each collision box
-            # Each link represents a simplified collision plate or support
-            linkMasses=[0] * 5,  # Each link has no mass, as the base has the mass
+            linkMasses=[0] * 6,
             linkCollisionShapeIndices=[
-                collision_box_id, collision_box_id, collision_box_id,  # Plates
-                collision_support_id, collision_support_id             # Supports
+                collision_box_id, collision_box_id, collision_box_id,
+                collision_support_side, collision_support_side, collision_support_back
             ],
-            linkVisualShapeIndices=[-1] * 5, # No separate visual for the links
+            linkVisualShapeIndices=[empty_visual] * 6,
             linkPositions=plate_pos + support_pos,
-            linkOrientations=[[0,0,0,1]] * 5,
-            linkInertialFramePositions=[[0,0,0]] * 5,
-            linkInertialFrameOrientations=[[0,0,0,1]] * 5,
-            linkParentIndices=[0, 0, 0, 0, 0],  # Parent all links to the base (index 0)
-            linkJointTypes=[p.JOINT_FIXED] * 5, # Fixed joints to the base
-            linkJointAxis=[[0, 0, 0]] * 5
+            linkOrientations=[[0,0,0,1]] * 6,
+            linkInertialFramePositions=[[0,0,0]] * 6,
+            linkInertialFrameOrientations=[[0,0,0,1]] * 6,
+            linkParentIndices=[0] * 6,
+            linkJointTypes=[p.JOINT_FIXED] * 6,
+            linkJointAxis=[[0, 0, 0]] * 6
         )
         self.add_object(shelf_body, "shelf")
 
