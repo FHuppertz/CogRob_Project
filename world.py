@@ -122,6 +122,14 @@ class World():
     def create_default_physical_objects(self):
         """Create physical objects in the PyBullet simulation.
         This should be called after PyBullet has been initialized."""
+        
+        # Visual to make collision boxes invisible
+        empty_visual = p.createVisualShape(
+            p.GEOM_BOX,
+            halfExtents=[1,1,1],              
+            rgbaColor=[0, 0, 0, 0]     # fully transparent
+        )
+
 
         # Create test cube
         half_size = [0.1, 0.1, 0.1]
@@ -135,8 +143,39 @@ class World():
         # Add cube to world objects
         self.add_object(cube_id, "cube")
 
+        # Create TV
+        TV_pos = np.array([8.0, -6.0, 0.0])
+        TV_orientation = p.getQuaternionFromEuler([0.0, 0.0, np.pi])
+
+        TV_scale = 0.8
+        half_size = np.array([1.35, 1, 1.3])*TV_scale
+        TV_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/TV.obj", meshScale=[TV_scale, TV_scale, TV_scale])
+        TV_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
+        TV_id = p.createMultiBody(
+            baseMass=0,
+            baseCollisionShapeIndex=-1,
+            baseVisualShapeIndex=TV_visual,
+            basePosition=TV_pos,            
+            baseOrientation=TV_orientation,      # Apply the rotation here
+            
+            # Add links for each collision box
+            linkMasses=[0],
+            linkCollisionShapeIndices=[TV_collision],
+            linkVisualShapeIndices=[empty_visual],
+            linkPositions=[[0.0,0.0,half_size[2]]],
+            linkOrientations=[[0,0,0,1]],
+            linkInertialFramePositions=[[0,0,0]],
+            linkInertialFrameOrientations=[[0,0,0,1]],
+            linkParentIndices=[0],
+            linkJointTypes=[p.JOINT_FIXED],
+            linkJointAxis=[[0, 0, 0]]
+        )
+        # Add TV to world objects
+        self.add_object(TV_id, "tv")
+
+
         # Define the location and rotation for the entire shelf
-        shelf_location = np.array([1.0, 3.0, 0.0])
+        shelf_location = np.array([1.0, 6.0, 0.0])
         shelf_scale = 0.25
 
         shelf_orientation = p.getQuaternionFromEuler([0, 0, np.pi])
@@ -164,12 +203,6 @@ class World():
         collision_support_side = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_side])
         collision_support_back = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_back])
         
-        empty_visual = p.createVisualShape(
-            p.GEOM_BOX,
-            halfExtents=[1,1,1],              
-            rgbaColor=[0, 0, 0, 0]     # fully transparent
-        )
-
 
         # Create the visual shape from your Blender mesh
         visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Shelf.obj", meshScale=[shelf_scale, shelf_scale, shelf_scale])
