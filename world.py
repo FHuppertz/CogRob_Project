@@ -200,4 +200,77 @@ class World():
         )
         self.add_object(shelf_body, "shelf")
 
+
+        # Define the location and rotation for the walls
+        walls_location = np.array([0.0, 0.0, 0.0])
+        walls_scale = 1.0
+
+        walls_orientation = p.getQuaternionFromEuler([0, 0, -np.pi/2])
+        
+        wall_dims = [
+            np.array([6.3, 0.3, 3.0])*walls_scale,
+            np.array([6.3, 0.3, 3.0])*walls_scale,
+            
+            np.array([0.3, 10.3, 3.0])*walls_scale,
+            np.array([0.3, 10.3, 3.0])*walls_scale,
+
+            np.array([0.3, 6.3, 3.0])*walls_scale,
+            np.array([0.3, 6.3, 3.0])*walls_scale,            
+
+            np.array([0.3, 1.7, 3.0])*walls_scale,
+            np.array([0.3, 1.7, 3.0])*walls_scale,
+
+            np.array([5.6, 0.3, 3.0])*walls_scale,
+            np.array([5.6, 0.3, 3.0])*walls_scale
+        ]
+
+        walls_pos = [
+            np.array([-4.15, 0.15, 1.5])*walls_scale,
+            np.array([4.15, 0.15, 1.5])*walls_scale,
+            
+            np.array([7.15, 5.15, 1.5])*walls_scale,
+            np.array([-7.15, 5.15, 1.5])*walls_scale,
+
+            np.array([1.85, 7.15, 1.5])*walls_scale,
+            np.array([-1.85, 7.15, 1.5])*walls_scale,
+
+            np.array([1.85, 1.15, 1.5])*walls_scale,
+            np.array([-1.85, 1.15, 1.5])*walls_scale,
+
+            np.array([4.5, 10.15, 1.5])*walls_scale,
+            np.array([-4.5, 10.15, 1.5])*walls_scale
+        ]
+
+        # Create collision shapes for the plates and supports
+        wall_collision_boxes = []
+
+        for wall_dim in wall_dims:
+            wall_collision_boxes.append(p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in wall_dim]))
+        
+        # Create the visual shape from your Blender mesh
+        visual_walls_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Walls.obj", meshScale=[walls_scale, walls_scale, walls_scale])
+
+        # Create the multibody object
+        # This is where we apply the location and orientation to the base
+        wall_body = p.createMultiBody(
+            baseMass=0,
+            baseCollisionShapeIndex=-1,
+            baseVisualShapeIndex=visual_walls_id,
+            basePosition=walls_location,           
+            baseOrientation=walls_orientation,      # Apply the rotation here
+            
+            # Add links for each collision box
+            linkMasses=[0] * 10,
+            linkCollisionShapeIndices=wall_collision_boxes,
+            linkVisualShapeIndices=[empty_visual] * 10,
+            linkPositions=walls_pos,
+            linkOrientations=[[0,0,0,1]] * 10,
+            linkInertialFramePositions=[[0,0,0]] * 10,
+            linkInertialFrameOrientations=[[0,0,0,1]] * 10,
+            linkParentIndices=[0] * 10,
+            linkJointTypes=[p.JOINT_FIXED] * 10,
+            linkJointAxis=[[0, 0, 0]] * 10
+        )
+        self.add_object(wall_body, "walls")
+
         return self.objects
