@@ -122,14 +122,13 @@ class World():
     def create_default_physical_objects(self):
         """Create physical objects in the PyBullet simulation.
         This should be called after PyBullet has been initialized."""
-        
+
         # Visual to make collision boxes invisible
         empty_visual = p.createVisualShape(
             p.GEOM_BOX,
-            halfExtents=[1,1,1],              
+            halfExtents=[1,1,1],
             rgbaColor=[0, 0, 0, 0]     # fully transparent
         )
-
 
         # Create test cube
         half_size = [0.1, 0.1, 0.1]
@@ -149,15 +148,15 @@ class World():
 
         TV_scale = 0.8
         half_size = np.array([1.35, 1, 1.3])*TV_scale
-        TV_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/TV.obj", meshScale=[TV_scale, TV_scale, TV_scale])
+        TV_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/TV.obj", meshScale=[TV_scale, TV_scale, TV_scale], rgbaColor=[0, 0, 0, 1])
         TV_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
         TV_id = p.createMultiBody(
             baseMass=0,
             baseCollisionShapeIndex=-1,
             baseVisualShapeIndex=TV_visual,
-            basePosition=TV_pos,            
+            basePosition=TV_pos,
             baseOrientation=TV_orientation,      # Apply the rotation here
-            
+
             # Add links for each collision box
             linkMasses=[0],
             linkCollisionShapeIndices=[TV_collision],
@@ -179,7 +178,7 @@ class World():
         shelf_scale = 0.25
 
         shelf_orientation = p.getQuaternionFromEuler([0, 0, np.pi])
-        
+
         # Collision shapes for the simplified planes (links)
         # Define half-extents for plates and supports
         plate_dims = np.array([3.0, 2.0, 0.02])*shelf_scale
@@ -202,7 +201,7 @@ class World():
         collision_box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in plate_dims])
         collision_support_side = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_side])
         collision_support_back = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_back])
-        
+
 
         # Create the visual shape from your Blender mesh
         visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Shelf.obj", meshScale=[shelf_scale, shelf_scale, shelf_scale])
@@ -215,7 +214,7 @@ class World():
             baseVisualShapeIndex=visual_shelf_id,
             basePosition=shelf_location,            # Correctly position the entire shelf
             baseOrientation=shelf_orientation,      # Apply the rotation here
-            
+
             # Add links for each collision box
             linkMasses=[0] * 6,
             linkCollisionShapeIndices=[
@@ -239,16 +238,16 @@ class World():
         walls_scale = 1.0
 
         walls_orientation = p.getQuaternionFromEuler([0, 0, -np.pi/2])
-        
+
         wall_dims = [
             np.array([6.3, 0.3, 3.0])*walls_scale,
             np.array([6.3, 0.3, 3.0])*walls_scale,
-            
+
             np.array([0.3, 10.3, 3.0])*walls_scale,
             np.array([0.3, 10.3, 3.0])*walls_scale,
 
             np.array([0.3, 6.3, 3.0])*walls_scale,
-            np.array([0.3, 6.3, 3.0])*walls_scale,            
+            np.array([0.3, 6.3, 3.0])*walls_scale,
 
             np.array([0.3, 1.7, 3.0])*walls_scale,
             np.array([0.3, 1.7, 3.0])*walls_scale,
@@ -260,7 +259,7 @@ class World():
         walls_pos = [
             np.array([-4.15, 0.15, 1.5])*walls_scale,
             np.array([4.15, 0.15, 1.5])*walls_scale,
-            
+
             np.array([7.15, 5.15, 1.5])*walls_scale,
             np.array([-7.15, 5.15, 1.5])*walls_scale,
 
@@ -279,7 +278,7 @@ class World():
 
         for wall_dim in wall_dims:
             wall_collision_boxes.append(p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in wall_dim]))
-        
+
         # Create the visual shape from your Blender mesh
         visual_walls_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Walls.obj", meshScale=[walls_scale, walls_scale, walls_scale])
 
@@ -289,9 +288,9 @@ class World():
             baseMass=0,
             baseCollisionShapeIndex=-1,
             baseVisualShapeIndex=visual_walls_id,
-            basePosition=walls_location,           
+            basePosition=walls_location,
             baseOrientation=walls_orientation,      # Apply the rotation here
-            
+
             # Add links for each collision box
             linkMasses=[0] * 10,
             linkCollisionShapeIndices=wall_collision_boxes,

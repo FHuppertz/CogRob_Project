@@ -66,7 +66,7 @@ class Robot:
     def invoke(self, prompt: str):
         if self.chat_agent:
             response = self.chat_agent.step(prompt)
-            print(f"Agent response:\n{response}")
+            print(f"Agent response:\n{response.msgs[0].content}")
         else:
             print("No chat agent available, please provide a model")
 
@@ -187,7 +187,7 @@ class Robot:
                     'status': 'success',
                     'message': 'Object grabbed successfully'
                 }
-            self.env.step(1)
+            self.env.step(500)
 
         # Timeout - failed to grab
         self.activity.remove("grab")
@@ -212,7 +212,7 @@ class Robot:
 
         dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
         if dist < 0.25:
-            offset = np.array([0, 0, 0.25])
+            offset = np.array([0.25, 0, 0])
             # Constraints to simulate grabbing (modified ChatGPT)
             p.resetBasePositionAndOrientation(
                 self.action_target,
@@ -247,10 +247,8 @@ class Robot:
             # Move Gripper up
             pos, _ = p.getBasePositionAndOrientation(self.robot_id)
             pos = np.array(pos)
-            target_pos = np.array(ee_pos) + offset
-            diff = target_pos - pos
 
-            joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+0.5*diff+3*offset) # Fix moving up
+            joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+np.array([0., 0., 1.5])) # Fix moving up
             for i, angle in enumerate(joint_angles):
                 p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
                                         targetPosition=angle,
@@ -259,6 +257,7 @@ class Robot:
                                         velocityGain=1.0,
                                         maxVelocity=2.0
                 )
+
             self.held_object_id = self.action_target
             self.activity.remove("grab")
             self.action_target = None
@@ -291,7 +290,7 @@ class Robot:
             if location is None:
                 print(f"Location '{target_name_or_position}' not found")
                 return {
-                    "status": "fail",
+                    "status": "failure",
                     "message": f"Location '{target_name_or_position}' not found"
                 }
             target_position = location.place_position
@@ -300,7 +299,10 @@ class Robot:
 
         # Check if we're actually holding something
         if self.constraint_id is None:
-            return 'failure'
+            return {
+                "status": "failure",
+                "message": "You are not holding anything"
+            }
 
         # Set up place state
         self.action_target = np.array(target_position)
