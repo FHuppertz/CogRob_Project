@@ -15,6 +15,8 @@ class Location():
         # Default place position is slightly offset from center
         self.place_position = np.array(place_position) if place_position is not None else np.array([center[0], center[1], 0.5])
         self.neighbours = []
+        
+        self.occupied = False
 
     def next_to(self, neighbours: List['Location']) -> None:
         for neighbour in neighbours:
@@ -46,7 +48,7 @@ class World():
             neighbour_location.next_to([self.locations[location.lower()]])
 
     def get_location(self, name: str) -> Optional[Location]:
-        return self.locations.get(name.lower())
+    	return self.locations.get(name.lower())
 
     def add_object(self, object_id: int, name: str) -> None:
         self.objects[name.lower()] = object_id
@@ -59,7 +61,8 @@ class World():
         end = self.get_location(end_name)
 
         if start is None or end is None:
-            return []
+        	print("Invalid start or end")
+        	return []
 
         goal = False
         checked = [start]
@@ -71,7 +74,9 @@ class World():
         while frontier != [] and not goal:
             frontier.sort(key=lambda x: x.f)
             current_Node = frontier.pop(0)
-
+            
+            #print(current_Node.location.center)
+	
             for neigh in current_Node.location.neighbours:
                 if neigh not in checked:
                     # Goal check
@@ -94,28 +99,39 @@ class World():
 
     @classmethod
     def create_default_world(cls):
+    	## TODO: Either make the location determine where the model, like the shelf, spawn or the other way around
+    	# Currently you can tell the robot the shelf is to the right, while the model is 500m in the air
+    	
         world = cls()
 
-        # Create locations using the new Location class
-        door = Location("Door", [0,0], [0.0, 0.5, 0.5])
-        living_room = Location("LivingRoom", [3,0], [3.0, 0.5, 0.5])
-        fridge = Location("Fridge", [1,-2], [1.0, -2.5, 0.5])
-        stove = Location("Stove", [3,-2], [3.0, -2.5, 0.5])
-        tv = Location("TV", [1,2], [1.0, 2.5, 0.5])
-
+        ### Create locations using the new Location class
+        
+        ## Hallway
+        locations = [
+		Location("Hallway Area Door", [3,0]),
+		Location("Front Door", [0,0]),
+		Location("Kitchen Door", [3,2]),
+		Location("Living Room Door", [3,-2]),
+		
+		## Kitchen
+		Location("Kitchen Area Left", [3,4]),
+		Location("Infront of Kitchen Shelf", [1,4.7]),
+		
+		# Will add a hight here, need to check A* later if it still works
+		Location("Bottom Kitchen Shelf", [1 ,6, 1.5*0.25]),
+		Location("Middle Kitchen Shelf", [1 ,6, 3.0*0.25]),
+		Location("Top Kitchen Shelf", [1, 6, 4.5*0.25])
+	]
         # Add locations to world
-        world.add_location(door)
-        world.add_location(living_room)
-        world.add_location(fridge)
-        world.add_location(stove)
-        world.add_location(tv)
+        for loc in locations:
+        	world.add_location(loc)
 
-        # Set up location relationships using the world's add_next_to method
-        world.add_next_to("door", ["livingroom", "fridge", "tv"])
-        world.add_next_to("livingroom", ["tv", "door", "fridge", "stove"])
-        world.add_next_to("fridge", ["door", "livingroom", "stove"])
-        world.add_next_to("stove", ["fridge", "livingroom"])
-        world.add_next_to("tv", ["door", "livingroom"])
+        ## Set up location relationships using the world's add_next_to method
+        # Hallway
+        world.add_next_to("Hallway Area Door", ["Front Door", "Kitchen Door", "Living Room Door"])
+        
+        # Kitchen
+        world.add_next_to("Kitchen Area Left", ["Kitchen Door", "Infront of Kitchen Shelf"])
 
         return world
 

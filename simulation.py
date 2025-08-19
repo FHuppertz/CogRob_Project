@@ -115,16 +115,20 @@ if __name__ == "__main__":
     # Give the robot commands
     robot.grab("cube")
 
-    for way_point in sim.world.get_path_between("door", "stove"):
+    for way_point in sim.world.get_path_between("Front Door", "Infront of Kitchen Shelf"):
         print(f"Moving to {way_point}")
         print(robot.move_to(way_point))
 
-    for way_point in sim.world.get_path_between("stove", "tv"):
-        print(f"Moving to {way_point}")
-        print(robot.move_to(way_point))
 
     # Place the cube at the tv location
-    robot.place("tv")
+    robot.place("Middle Kitchen Shelf")
+    
+    robot.percieve()
+    
+    # Back to door
+    for way_point in sim.world.get_path_between("Infront of Kitchen Shelf", "Front Door"):
+        print(f"Moving to {way_point}")
+        print(robot.move_to(way_point))
 
     # Delay before invoking the robot's agent
     sim.step(1000)
@@ -133,7 +137,8 @@ if __name__ == "__main__":
     robot.invoke("Please pick up the cube, move to the door and place the cube")
 
     # Step the simulation again
-    sim.step(1000)
+    while True:
+    	sim.step(1000)
 
     # Disconnect from PyBullet
     sim.disconnect()
