@@ -120,8 +120,13 @@ if __name__ == "__main__":
         print(robot.move_to(way_point))
 
 
-    # Place the cube at the tv location
-    robot.place("Middle Kitchen Shelf")
+    # Place the cube at the shelf
+    robot.place("Bottom Kitchen Shelf")
+    sim.step(100)
+    robot.grab("cube")
+    sim.step(100)
+    robot.place("Top Kitchen Shelf")
+
     
     robot.percieve()
     

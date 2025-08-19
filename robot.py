@@ -187,12 +187,26 @@ class Robot:
                     'status': 'success',
                     'message': 'Object grabbed successfully'
                 }
-            self.env.step(500)
+            self.env.step(1)
 
         # Timeout - failed to grab
         self.activity.remove("grab")
         self.action_target = None
+        p.changeConstraint(self.constraint_id, maxForce=500, erp=1.0)
 
+        # Move Gripper up
+        pos, _ = p.getBasePositionAndOrientation(self.robot_id)
+        pos = np.array(pos)
+
+        joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+np.array([0., 0., 1.5])) # Fix moving up
+        for i, angle in enumerate(joint_angles):
+            p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                    targetPosition=angle,
+                                    force=500,
+                                    positionGain=0.03,
+                                    velocityGain=1.0,
+                                    maxVelocity=2.0
+            )
         return {
             'status': 'timeout',
             'message': 'Timed out trying to grab object'
@@ -211,7 +225,7 @@ class Robot:
         ee_pos, ee_ori = p.getLinkState(self.robot_id, ee_index)[4:6]
 
         dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
-        if dist < 0.25:
+        if dist < 0.5:
             offset = np.array([0.25, 0, 0])
             # Constraints to simulate grabbing (modified ChatGPT)
             p.resetBasePositionAndOrientation(
@@ -320,6 +334,20 @@ class Robot:
         # Timeout - failed to place
         self.activity.remove("place")
         self.action_target = None
+
+        # Move Gripper up
+        pos, _ = p.getBasePositionAndOrientation(self.robot_id)
+        pos = np.array(pos)
+
+        joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+np.array([0., 0., 1.5])) # Fix moving up
+        for i, angle in enumerate(joint_angles):
+            p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
+                                    targetPosition=angle,
+                                    force=500,
+                                    positionGain=0.03,
+                                    velocityGain=1.0,
+                                    maxVelocity=2.0
+            )
         return {
             "status": "failure",
             "message": "Failed to place object"
@@ -329,9 +357,7 @@ class Robot:
         assert "place" in self.activity and self.action_target is not None
         assert isinstance(self.action_target, np.ndarray) and len(self.action_target) == 3
 
-        # Position above the target to ensure safe placement
         placement_pos = self.action_target.copy()
-        placement_pos[2] += 0.2  # Place slightly above the target
 
         # Move arm to placement position
         joint_angles = p.calculateInverseKinematics(self.robot_id, 6, placement_pos)
@@ -356,20 +382,6 @@ class Robot:
 
             # Teleport the object to the exact target position
             p.resetBasePositionAndOrientation(self.held_object_id, self.action_target, [0,0,0,1])
-
-            # Move arm slightly up to ensure release
-            lift_pos = placement_pos.copy()
-            lift_pos[2] += 0.1
-
-            # Move to lift position
-            lift_joint_angles = p.calculateInverseKinematics(self.robot_id, 6, lift_pos)
-            for i, angle in enumerate(lift_joint_angles):
-                p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
-                                        targetPosition=angle,
-                                        force=500,
-                                        positionGain=0.03,
-                                        velocityGain=1.0,
-                                        maxVelocity=2.0)
 
             self.held_object_id = None
             self.activity.remove("place")

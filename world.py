@@ -115,12 +115,11 @@ class World():
 		
 		## Kitchen
 		Location("Kitchen Area Left", [3,4]),
-		Location("Infront of Kitchen Shelf", [1,4.7]),
+		Location("Infront of Kitchen Shelf", [1,4.85]),
 		
-		# Will add a hight here, need to check A* later if it still works
-		Location("Bottom Kitchen Shelf", [1 ,6, 1.5*0.25]),
-		Location("Middle Kitchen Shelf", [1 ,6, 3.0*0.25]),
-		Location("Top Kitchen Shelf", [1, 6, 4.5*0.25])
+		Location("Bottom Kitchen Shelf", [1,6], [1,6,1.5*0.25+0.1]),
+		Location("Middle Kitchen Shelf", [1,6], [1,6,3.0*0.25+0.1]),
+		Location("Top Kitchen Shelf", [1,6], [1,6,4.5*0.25+0.1])
 	]
         # Add locations to world
         for loc in locations:
