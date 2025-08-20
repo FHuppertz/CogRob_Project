@@ -132,16 +132,16 @@ if __name__ == "__main__":
 
 	print("Current location of robot:")
 	print(world.get_current_location(robot.position))
-	
+
 	# Move back to door using internal path planning
 	print("Moving back to Front Door")
 	print(robot.move_to("Front Door"))
 
 	# Delay before invoking the robot's agent
-	sim.step(1000)
+	sim.step(100)
 
 	# Invoke the robot's agent
-	robot.invoke("Please pick up the box, move to the living room and place it there.")
+	robot.invoke("Please pick up the box, move to the living room and place it in the bottom of the kitchen shelf.")
 
 	# Step the simulation again
 	while True:

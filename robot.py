@@ -58,9 +58,9 @@ class Robot:
 		system_message = """You are a robot assistant. Your goal is to help the user with their tasks.
 
 You have the following tools available to you to assist with tasks:
-- move_to: Move the robot base to a target location by name (str).
-- grab: Pick up an object by name (str). You must move to the location containing the object first before grabbing it. Successfully grabbing an object makes the object the currently held object.
-- place: Place the held object at the given location by name (str). You must move to the location first before placing the object there. Note that you must have a currently held item that you can place. Successfully placing an object will remove it from being the currently held object.
+- move_to: Move the robot base to a target location by name (str). If you need to place or pick something, consider moving in front of the object in question before doing so, if such a location exists.
+- grab: Pick up an object by name (str). You must move to the location containing the object (or in front of the object) first before grabbing it or grabbing from it. Successfully grabbing an object makes the object the currently held object.
+- place: Place the held object at the given location by name (str). You must move to the location (or in front of the location) first before placing the object there. Note that you must have a currently held item that you can place. Successfully placing an object will remove it from being the currently held object.
 """
 		if model:
 			self.toolkit = RobotToolkit(self)
@@ -82,6 +82,8 @@ You have the following tools available to you to assist with tasks:
 		if self.chat_agent:
 			prompt = self.create_environment_prompt() + "\n"
 			prompt += f"You are given the following task:\n<task>\n{task_prompt}\n</task>"
+			print(f"Invoking agent with prompt:\n{prompt}")
+
 			response = self.chat_agent.step(prompt)
 			print(f"Agent response:\n{response.msgs[0].content}")
 		else:
@@ -111,6 +113,7 @@ You have the following tools available to you to assist with tasks:
 			str: 'success' if movement was successful, 'failure' otherwise
 		"""
 		current_location_name = self.env.world.get_current_location(self.position)
+		print(f"Current location: {current_location_name}; Target location: {target}")
 
 		# Handle both location names and direct positions
 		if isinstance(target, str):
@@ -133,7 +136,9 @@ You have the following tools available to you to assist with tasks:
 						'message': f"Location '{target}' not found"
 					}
 				target_pos = location.center
+				print(f"No path found, moving directly to target at {target_pos}")
 			else:
+				print(f"Path found: {[self.env.world.get_current_location(waypoint) for waypoint in self.path]}")
 				# Use path planning
 				self.waypoint_index = 0
 				target_pos = np.array(self.path[0])
