@@ -61,6 +61,9 @@ You have the following tools available to you to assist with tasks:
 - move_to: Move the robot base to a target location by name (str). If you need to place or pick something, consider moving in front of the object in question before doing so, if such a location exists.
 - grab: Pick up an object by name (str). You must move to the location containing the object (or in front of the object) first before grabbing it or grabbing from it. Successfully grabbing an object makes the object the currently held object.
 - place: Place the held object at the given location by name (str). You must move to the location (or in front of the location) first before placing the object there. Note that you must have a currently held item that you can place. Successfully placing an object will remove it from being the currently held object.
+- finish_task: Finish the current task with a status report. Use this tool when you have completed the task or determined that it cannot be completed. Provide a status (success, failure, or unknown), a description of the original task, and a summary of the execution trace.
+
+If you come across issues, think in detail about what may have caused them, and take alternative approaches or measures to complete the task.
 """
 		if model:
 			self.toolkit = RobotToolkit(self)

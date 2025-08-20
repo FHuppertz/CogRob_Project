@@ -57,10 +57,29 @@ class RobotToolkit(BaseToolkit):
         result = self.robot.place(target)
         return result
 
+    def finish_task(self, status: str, description: str, summary: str) -> dict:
+        """Finish the current task with a status report.
+
+        Args:
+            status: Whether the task execution was a success, a failure, or unknown.
+            description: A description of the task, that is independent of what was actually done.
+                         This is a description of the task given to the robot.
+            summary: A description of the execution trace of the robot to perform the task.
+
+        Returns:
+            dict: Result confirming the task completion.
+        """
+        return {
+            "status": status,
+            "description": description,
+            "summary": summary
+        }
+
     def get_tools(self) -> list[FunctionTool]:
         """Get list of available tools."""
         return [
             FunctionTool(self.move_to),
             FunctionTool(self.grab),
-            FunctionTool(self.place)
+            FunctionTool(self.place),
+            FunctionTool(self.finish_task)
         ]
