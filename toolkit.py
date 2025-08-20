@@ -1,6 +1,5 @@
-from typing import TYPE_CHECKING, Union, List
+from typing import List, Optional, TYPE_CHECKING, Union
 from camel.toolkits import FunctionTool, BaseToolkit
-import numpy as np
 
 if TYPE_CHECKING:
     from robot import Robot
@@ -30,7 +29,7 @@ class RobotToolkit(BaseToolkit):
         return result
 
     def grab(self, target: Union[str, int]) -> dict:
-        """Grab an object by name or ID. You must move to the location containing 
+        """Grab an object by name or ID. You must move to the location containing
         the object first before grabbing it. Grabbing an object makes the object
         the currently held object.
 
@@ -43,18 +42,19 @@ class RobotToolkit(BaseToolkit):
         result = self.robot.grab(target)
         return result
 
-    def place(self, target: Union[str, List[float]]) -> dict:
-        """Place the currently held object at a target location. You must move to 
+    def place(self, location: str, place_position: Optional[str]) -> dict:
+        """Place the currently held object at a target location. You must move to
         the location first before placing the object there, and must also have an
         object that is currently being held.
 
         Args:
-            target: Either a string name of a location or [x, y, z] coordinates.
+            location: A string name of a location
+            place_position: Optional position within the location to place the object
 
         Returns:
             dict: Result of the place action including status.
         """
-        result = self.robot.place(target)
+        result = self.robot.place(location, place_position)
         return result
 
     def finish_task(self, status: str, description: str, summary: str) -> dict:
@@ -63,17 +63,20 @@ class RobotToolkit(BaseToolkit):
         Args:
             status: Whether the task execution was a success, a failure, or unknown.
             description: A description of the task, that is independent of what was actually done.
-                         This is a description of the task given to the robot.
-            summary: A description of the execution trace of the robot to perform the task.
+                This is a description of the task given to the robot.
+            summary: A description of the execution trace of the robot to perform the task. Be
+                sure to include any relevant details about the task execution in detail.
 
         Returns:
             dict: Result confirming the task completion.
         """
-        return {
+        result = {
             "status": status,
             "description": description,
             "summary": summary
         }
+        print(f"Agent has finished task with result:\n{result}")
+        return result
 
     def get_tools(self) -> list[FunctionTool]:
         """Get list of available tools."""
