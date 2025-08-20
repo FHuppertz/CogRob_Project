@@ -119,10 +119,9 @@ if __name__ == "__main__":
 	# Give the robot commands
 	robot.grab("cube")
 
-	for way_point in sim.world.get_path_between("Front Door", "Infront of Kitchen Shelf"):
-		print(f"Moving to {way_point}")
-		print(robot.move_to(way_point))
-
+	# Move to kitchen shelf using internal path planning
+	print("Moving to Infront of Kitchen Shelf")
+	print(robot.move_to("Infront of Kitchen Shelf"))
 
 	# Place the cube at the shelf
 	robot.place("Bottom Kitchen Shelf")
@@ -131,13 +130,12 @@ if __name__ == "__main__":
 	sim.step(100)
 	robot.place("Top Kitchen Shelf")
 
+	print("Current location of robot:")
+	print(world.get_current_location(robot.position))
 	
-	robot.percieve()
-	
-	# Back to door
-	for way_point in sim.world.get_path_between("Infront of Kitchen Shelf", "Front Door"):
-		print(f"Moving to {way_point}")
-		print(robot.move_to(way_point))
+	# Move back to door using internal path planning
+	print("Moving back to Front Door")
+	print(robot.move_to("Front Door"))
 
 	# Delay before invoking the robot's agent
 	sim.step(1000)
