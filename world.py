@@ -192,6 +192,9 @@ class World():
 		# Hallway
 		world.add_next_to("Hallway Area Door", ["Front Door", "Kitchen Door", "Living Room Door"])
 
+		# Front door
+		world.add_next_to("Front Door", ["Kitchen Door, Living Room Door"])
+
 		# Kitchen
 		world.add_next_to("Kitchen Area Left", ["Kitchen Door", "Infront of Kitchen Shelf"])
 
