@@ -136,12 +136,29 @@ if __name__ == "__main__":
     # Delay before invoking the robot's agent
     sim.step(100)
 
-    # Invoke the robot's agent
-    robot.invoke("Please pick up the box, move to the living room and place it in the bottom of the kitchen shelf.")
-
-    # Step the simulation again
-    while True:
-        sim.step(1000)
-
+    # Interactive CLI for sending commands to the robot
+    try:
+        while True:
+            # Get user input
+            task_prompt = input("Enter a task for the robot (or 'quit' to exit): ")
+            
+            # Check if user wants to quit
+            if task_prompt.lower() in ['quit', 'exit', 'q']:
+                print("Exiting simulation...")
+                break
+            
+            # Skip empty prompts
+            if not task_prompt.strip():
+                continue
+            
+            # Invoke the robot's agent with the user's task
+            robot.invoke(task_prompt)
+            
+            # Delay at end
+            sim.step(100)
+            
+    except KeyboardInterrupt:
+        print("\nSimulation interrupted by user.")
+    
     # Disconnect from PyBullet
     sim.disconnect()
