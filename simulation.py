@@ -141,7 +141,7 @@ if __name__ == "__main__":
 	sim.step(1000)
 
 	# Invoke the robot's agent
-	robot.invoke("Please pick up the cube, move to the door and place the cube")
+	robot.invoke("Please pick up the box, move to the living room and place it there.")
 
 	# Step the simulation again
 	while True:
