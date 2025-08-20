@@ -77,12 +77,24 @@ class Robot:
 		pos, ori = p.getBasePositionAndOrientation(self.base_id)
 		return pos
 
-	def invoke(self, prompt: str):
+	def invoke(self, task_prompt: str):
 		if self.chat_agent:
-			response = self.chat_agent.step(prompt)
+			prompt = self.create_environment_prompt() + "\n"
+			response = self.chat_agent.step(prompt + task_prompt)
 			print(f"Agent response:\n{response.msgs[0].content}")
 		else:
 			print("No chat agent available, please provide a model")
+
+	def create_environment_prompt(self) -> str:
+		"""
+		Create a prompt describing the environment of the robot.
+		
+		Returns:
+			str: Formatted description of the environment
+		"""
+		environment_description = ""
+		environment_description += self.env.world.get_locations_description()
+		return environment_description
 
 	def move_to(self, target):
 		"""

@@ -14,7 +14,7 @@ class Location():
 		self.center = np.array(center)
 		# Default place position is slightly offset from center
 		self.place_position = np.array(place_position) if place_position is not None else np.array([center[0], center[1], 0.5])
-		self.neighbours = []
+		self.neighbours: List['Location']= []
 		
 		self.occupied = False
 
@@ -107,6 +107,27 @@ class World():
 					frontier.append(next_Node)
 
 		return []
+
+	def get_locations_description(self) -> str:
+		"""
+		Generate a string description of all locations in the world and their neighbours.
+		
+		Returns:
+			str: Formatted description of locations and their neighbours
+		"""
+		if not self.locations:
+			return "No locations exist in the world."
+		
+		description = "The following locations exist in the world:\n"
+		
+		for location_name, location in self.locations.items():
+			description += f"- {location.name}\n"
+			if location.neighbours:
+				description += "  - Neighbouring Locations:\n"
+				for neighbour in location.neighbours:
+					description += f"    - {neighbour.name}\n"
+		
+		return description
 
 	@classmethod
 	def create_default_world(cls):
