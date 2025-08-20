@@ -67,6 +67,22 @@ class World():
 		
 		return None
 
+	def get_object_location(self, object_id: int) -> Optional[str]:
+		"""Get the location name of an object based on its position."""
+		pos, _ = p.getBasePositionAndOrientation(object_id)
+		return self.get_current_location(pos)
+
+	def get_objects_by_location(self) -> Dict[str, List[str]]:
+		"""Get a mapping of location names to lists of object names in those locations."""
+		location_objects = {loc_name: [] for loc_name in self.locations.keys()}
+		
+		for obj_name, obj_id in self.objects.items():
+			obj_location = self.get_object_location(obj_id)
+			if obj_location and obj_location in location_objects:
+				location_objects[obj_location].append(obj_name)
+		
+		return location_objects
+
 	def get_path_between(self, start_name: str, end_name: str) -> List[List[float]]:
 		start = self.get_location(start_name)
 		end = self.get_location(end_name)
@@ -120,8 +136,18 @@ class World():
 		
 		description = "The following locations exist in the world:\n"
 		
+		# Get objects by location for inclusion in descriptions
+		location_objects = self.get_objects_by_location()
+		
 		for location_name, location in self.locations.items():
 			description += f"- {location.name}\n"
+			# Add objects in this location
+			objects_in_location = location_objects.get(location_name, [])
+			if objects_in_location:
+				description += "  - Objects in location:\n"
+				for obj_name in objects_in_location:
+					description += f"    - {obj_name}\n"
+
 			if location.neighbours:
 				description += "  - Neighbouring Locations:\n"
 				for neighbour in location.neighbours:
@@ -140,19 +166,19 @@ class World():
 		
 		## Hallway
 		locations = [
-		Location("Hallway Area Door", [3,0]),
-		Location("Front Door", [0,0]),
-		Location("Kitchen Door", [3,2]),
-		Location("Living Room Door", [3,-2]),
-		
-		## Kitchen
-		Location("Kitchen Area Left", [3,4]),
-		Location("Infront of Kitchen Shelf", [1,4.85]),
-		
-		Location("Bottom Kitchen Shelf", [1,6], [1,6,1.5*0.25+0.1]),
-		Location("Middle Kitchen Shelf", [1,6], [1,6,3.0*0.25+0.1]),
-		Location("Top Kitchen Shelf", [1,6], [1,6,4.5*0.25+0.1])
-	]
+			Location("Hallway Area Door", [3,0]),
+			Location("Front Door", [0,0]),
+			Location("Kitchen Door", [3,2]),
+			Location("Living Room Door", [3,-2]),
+			
+			## Kitchen
+			Location("Kitchen Area Left", [3,4]),
+			Location("Infront of Kitchen Shelf", [1,4.85]),
+			
+			Location("Bottom Kitchen Shelf", [1,6], [1,6,1.5*0.25+0.1]),
+			Location("Middle Kitchen Shelf", [1,6], [1,6,3.0*0.25+0.1]),
+			Location("Top Kitchen Shelf", [1,6], [1,6,4.5*0.25+0.1])
+		]
 		# Add locations to world
 		for loc in locations:
 			world.add_location(loc)
@@ -189,6 +215,18 @@ class World():
 
 		# Add cube to world objects
 		self.add_object(cube_id, "cube")
+
+		# Create box cube in Kitchen Area Left
+		half_size = [0.1, 0.1, 0.1]
+		box_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=half_size)
+		box_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
+		box_id = p.createMultiBody(baseMass=0.01,
+								   baseCollisionShapeIndex=box_collision,
+								   baseVisualShapeIndex=box_visual,
+								   basePosition=[3.0, 4.0, 0.1])
+
+		# Add box to world objects
+		self.add_object(box_id, "box")
 
 		# Create TV
 		TV_pos = np.array([8.0, -6.0, 0.0])
