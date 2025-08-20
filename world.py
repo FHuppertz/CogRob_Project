@@ -15,7 +15,7 @@ class Location():
 		# Default place position is slightly offset from center
 		self.place_position = np.array(place_position) if place_position is not None else np.array([center[0], center[1], 0.5])
 		self.neighbours: List['Location']= []
-		
+
 		self.occupied = False
 
 	def next_to(self, neighbours: List['Location']) -> None:
@@ -55,17 +55,22 @@ class World():
 
 	def get_object(self, name: str) -> Optional[int]:
 		return self.objects.get(name.lower())
-	
+
 	def get_current_location(self, position):
 		"""Get the current location of the robot."""
-		position = np.array(position)
-		
-		for loc_name, location in self.locations.items():
-			center = location.center
-			if np.linalg.norm(center - position[0:2]) < 0.1:
-				return loc_name
-		
-		return None
+		position = np.array(position)[:2]  # Only consider x,y coordinates
+
+		# Get array of all location centers
+		centers = np.array([loc.center for loc in self.locations.values()])
+
+		# Calculate distances to all locations at once
+		distances = np.linalg.norm(centers - position, axis=1)
+
+		# Get index of minimum distance
+		min_index = np.argmin(distances)
+
+		# Return the location name
+		return list(self.locations.keys())[min_index]
 
 	def get_object_location(self, object_id: int) -> Optional[str]:
 		"""Get the location name of an object based on its position."""
@@ -75,12 +80,12 @@ class World():
 	def get_objects_by_location(self) -> Dict[str, List[str]]:
 		"""Get a mapping of location names to lists of object names in those locations."""
 		location_objects = {loc_name: [] for loc_name in self.locations.keys()}
-		
+
 		for obj_name, obj_id in self.objects.items():
 			obj_location = self.get_object_location(obj_id)
 			if obj_location and obj_location in location_objects:
 				location_objects[obj_location].append(obj_name)
-		
+
 		return location_objects
 
 	def get_path_between(self, start_name: str, end_name: str) -> List[List[float]]:
@@ -101,9 +106,9 @@ class World():
 		while frontier != [] and not goal:
 			frontier.sort(key=lambda x: x.f)
 			current_Node = frontier.pop(0)
-			
+
 			#print(current_Node.location.center)
-	
+
 			for neigh in current_Node.location.neighbours:
 				if neigh not in checked:
 					# Goal check
@@ -127,18 +132,18 @@ class World():
 	def get_locations_description(self) -> str:
 		"""
 		Generate a string description of all locations in the world and their neighbours.
-		
+
 		Returns:
 			str: Formatted description of locations and their neighbours
 		"""
 		if not self.locations:
 			return "No locations exist in the world."
-		
+
 		description = "The following locations exist in the world:\n"
-		
+
 		# Get objects by location for inclusion in descriptions
 		location_objects = self.get_objects_by_location()
-		
+
 		for location_name, location in self.locations.items():
 			description += f"- {location.name}\n"
 			# Add objects in this location
@@ -152,29 +157,29 @@ class World():
 				description += "  - Neighbouring Locations:\n"
 				for neighbour in location.neighbours:
 					description += f"    - {neighbour.name}\n"
-		
+
 		return description
 
 	@classmethod
 	def create_default_world(cls):
 		## TODO: Either make the location determine where the model, like the shelf, spawn or the other way around
 		# Currently you can tell the robot the shelf is to the right, while the model is 500m in the air
-		
+
 		world = cls()
 
 		### Create locations using the new Location class
-		
+
 		## Hallway
 		locations = [
 			Location("Hallway Area Door", [3,0]),
 			Location("Front Door", [0,0]),
 			Location("Kitchen Door", [3,2]),
 			Location("Living Room Door", [3,-2]),
-			
+
 			## Kitchen
 			Location("Kitchen Area Left", [3,4]),
 			Location("Infront of Kitchen Shelf", [1,4.85]),
-			
+
 			Location("Bottom Kitchen Shelf", [1,6], [1,6,1.5*0.25+0.1]),
 			Location("Middle Kitchen Shelf", [1,6], [1,6,3.0*0.25+0.1]),
 			Location("Top Kitchen Shelf", [1,6], [1,6,4.5*0.25+0.1])
@@ -186,7 +191,7 @@ class World():
 		## Set up location relationships using the world's add_next_to method
 		# Hallway
 		world.add_next_to("Hallway Area Door", ["Front Door", "Kitchen Door", "Living Room Door"])
-		
+
 		# Kitchen
 		world.add_next_to("Kitchen Area Left", ["Kitchen Door", "Infront of Kitchen Shelf"])
 
@@ -195,11 +200,11 @@ class World():
 	def create_default_physical_objects(self):
 		"""Create physical objects in the PyBullet simulation.
 		This should be called after PyBullet has been initialized."""
-		
+
 		# Visual to make collision boxes invisible
 		empty_visual = p.createVisualShape(
 			p.GEOM_BOX,
-			halfExtents=[1,1,1],              
+			halfExtents=[1,1,1],
 			rgbaColor=[0, 0, 0, 0]     # fully transparent
 		)
 
@@ -216,14 +221,14 @@ class World():
 		# Add cube to world objects
 		self.add_object(cube_id, "cube")
 
-		# Create box cube in Kitchen Area Left
+		# Create box cube at Living Room Door
 		half_size = [0.1, 0.1, 0.1]
 		box_visual = p.createVisualShape(p.GEOM_BOX, halfExtents=half_size)
 		box_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
 		box_id = p.createMultiBody(baseMass=0.01,
 								   baseCollisionShapeIndex=box_collision,
 								   baseVisualShapeIndex=box_visual,
-								   basePosition=[3.0, 4.0, 0.1])
+								   basePosition=[3.0, -2.5, 0.1])
 
 		# Add box to world objects
 		self.add_object(box_id, "box")
@@ -240,9 +245,9 @@ class World():
 			baseMass=0,
 			baseCollisionShapeIndex=-1,
 			baseVisualShapeIndex=TV_visual,
-			basePosition=TV_pos,            
+			basePosition=TV_pos,
 			baseOrientation=TV_orientation,      # Apply the rotation here
-			
+
 			# Add links for each collision box
 			linkMasses=[0],
 			linkCollisionShapeIndices=[TV_collision],
@@ -264,7 +269,7 @@ class World():
 		shelf_scale = 0.25
 
 		shelf_orientation = p.getQuaternionFromEuler([0, 0, np.pi])
-		
+
 		# Collision shapes for the simplified planes (links)
 		# Define half-extents for plates and supports
 		plate_dims = np.array([3.0, 2.0, 0.02])*shelf_scale
@@ -287,7 +292,7 @@ class World():
 		collision_box_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in plate_dims])
 		collision_support_side = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_side])
 		collision_support_back = p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in support_dims_back])
-		
+
 
 		# Create the visual shape from your Blender mesh
 		visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Shelf.obj", meshScale=[shelf_scale, shelf_scale, shelf_scale])
@@ -300,7 +305,7 @@ class World():
 			baseVisualShapeIndex=visual_shelf_id,
 			basePosition=shelf_location,            # Correctly position the entire shelf
 			baseOrientation=shelf_orientation,      # Apply the rotation here
-			
+
 			# Add links for each collision box
 			linkMasses=[0] * 6,
 			linkCollisionShapeIndices=[
@@ -324,16 +329,16 @@ class World():
 		walls_scale = 1.0
 
 		walls_orientation = p.getQuaternionFromEuler([0, 0, -np.pi/2])
-		
+
 		wall_dims = [
 			np.array([6.3, 0.3, 3.0])*walls_scale,
 			np.array([6.3, 0.3, 3.0])*walls_scale,
-			
+
 			np.array([0.3, 10.3, 3.0])*walls_scale,
 			np.array([0.3, 10.3, 3.0])*walls_scale,
 
 			np.array([0.3, 6.3, 3.0])*walls_scale,
-			np.array([0.3, 6.3, 3.0])*walls_scale,            
+			np.array([0.3, 6.3, 3.0])*walls_scale,
 
 			np.array([0.3, 1.7, 3.0])*walls_scale,
 			np.array([0.3, 1.7, 3.0])*walls_scale,
@@ -345,7 +350,7 @@ class World():
 		walls_pos = [
 			np.array([-4.15, 0.15, 1.5])*walls_scale,
 			np.array([4.15, 0.15, 1.5])*walls_scale,
-			
+
 			np.array([7.15, 5.15, 1.5])*walls_scale,
 			np.array([-7.15, 5.15, 1.5])*walls_scale,
 
@@ -364,7 +369,7 @@ class World():
 
 		for wall_dim in wall_dims:
 			wall_collision_boxes.append(p.createCollisionShape(p.GEOM_BOX, halfExtents=[d/2 for d in wall_dim]))
-		
+
 		# Create the visual shape from your Blender mesh
 		visual_walls_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Walls.obj", meshScale=[walls_scale, walls_scale, walls_scale])
 
@@ -374,9 +379,9 @@ class World():
 			baseMass=0,
 			baseCollisionShapeIndex=-1,
 			baseVisualShapeIndex=visual_walls_id,
-			basePosition=walls_location,           
+			basePosition=walls_location,
 			baseOrientation=walls_orientation,      # Apply the rotation here
-			
+
 			# Add links for each collision box
 			linkMasses=[0] * 10,
 			linkCollisionShapeIndices=wall_collision_boxes,
