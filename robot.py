@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class Robot:
-	def __init__(self, simulation_env: SimulationEnvironment, model=None):
+	def __init__(self, simulation_env: 'SimulationEnvironment', model=None):
 		self.env = simulation_env
 		self.env.add_subscriber(self)
 
@@ -90,7 +90,7 @@ You have the following tools available to you to assist with tasks:
 	def create_environment_prompt(self) -> str:
 		"""
 		Create a prompt describing the environment of the robot.
-		
+
 		Returns:
 			str: Formatted description of the environment
 		"""
@@ -111,7 +111,7 @@ You have the following tools available to you to assist with tasks:
 			str: 'success' if movement was successful, 'failure' otherwise
 		"""
 		current_location_name = self.env.world.get_current_location(self.position)
-		
+
 		# Handle both location names and direct positions
 		if isinstance(target, str):
 			# Generate path to target location
@@ -121,7 +121,7 @@ You have the following tools available to you to assist with tasks:
 					'status': 'failure',
 					'message': "Current location not found"
 				}
-			
+
 			self.path = self.env.world.get_path_between(current_location_name, target)
 			if not self.path:
 				# Fallback to direct movement if no path found
@@ -445,7 +445,7 @@ You have the following tools available to you to assist with tasks:
 			self.held_object_id = None
 			self.activity.remove("place")
 			self.action_target = None
-			
+
 			# Move Gripper up
 			pos = np.array(self.position)
 
