@@ -72,6 +72,11 @@ class Robot:
 			self.toolkit = None
 			self.chat_agent = None
 
+	@property
+	def position(self):
+		pos, ori = p.getBasePositionAndOrientation(self.base_id)
+		return pos
+
 	def invoke(self, prompt: str):
 		if self.chat_agent:
 			response = self.chat_agent.step(prompt)
@@ -91,8 +96,7 @@ class Robot:
 		Returns:
 			str: 'success' if movement was successful, 'failure' otherwise
 		"""
-		pos, ori = p.getBasePositionAndOrientation(self.base_id)
-		current_location_name = self.env.world.get_current_location(pos)
+		current_location_name = self.env.world.get_current_location(self.position)
 		
 		# Handle both location names and direct positions
 		if isinstance(target, str):
@@ -158,8 +162,7 @@ class Robot:
 		assert "move" in self.activity and self.action_target is not None
 		# Need to assert that action_target is a numpy array or list of length 3
 
-		pos, ori = p.getBasePositionAndOrientation(self.base_id)
-		pos = np.array(pos)
+		pos = np.array(self.position)
 
 		# Calculate direction to target
 		goal_vec = self.action_target - pos
@@ -240,8 +243,7 @@ class Robot:
 		p.changeConstraint(self.constraint_id, maxForce=500, erp=1.0)
 
 		# Move Gripper up
-		pos, _ = p.getBasePositionAndOrientation(self.robot_id)
-		pos = np.array(pos)
+		pos = np.array(self.position)
 
 		joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+np.array([0., 0., 1.5])) # Fix moving up
 		for i, angle in enumerate(joint_angles):
@@ -304,8 +306,7 @@ class Robot:
 			p.changeConstraint(self.constraint_id, maxForce=500, erp=1.0)
 
 			# Move Gripper up
-			pos, _ = p.getBasePositionAndOrientation(self.robot_id)
-			pos = np.array(pos)
+			pos = np.array(self.position)
 
 			joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+np.array([0., 0., 1.5])) # Fix moving up
 			for i, angle in enumerate(joint_angles):
@@ -381,8 +382,7 @@ class Robot:
 		self.action_target = None
 
 		# Move Gripper up
-		pos, _ = p.getBasePositionAndOrientation(self.robot_id)
-		pos = np.array(pos)
+		pos = np.array(self.position)
 
 		joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+np.array([0., 0., 1.5])) # Fix moving up
 		for i, angle in enumerate(joint_angles):
@@ -433,8 +433,7 @@ class Robot:
 			self.action_target = None
 			
 			# Move Gripper up
-			pos, _ = p.getBasePositionAndOrientation(self.robot_id)
-			pos = np.array(pos)
+			pos = np.array(self.position)
 
 			joint_angles = p.calculateInverseKinematics(self.robot_id, 6, pos+np.array([0., 0., 1.5])) # Fix moving up
 			for i, angle in enumerate(joint_angles):
