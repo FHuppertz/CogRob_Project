@@ -18,7 +18,7 @@ class RobotToolkit(BaseToolkit):
         super().__init__()
 
     def move_to(self, target: Union[str, List[float]]) -> dict:
-        """Move the robot to a target location.
+        """Move to a target location.
 
         Args:
             target: Either a string name of a location or [x, y] coordinates.
@@ -30,7 +30,9 @@ class RobotToolkit(BaseToolkit):
         return result
 
     def grab(self, target: Union[str, int]) -> dict:
-        """Grab an object by name or ID.
+        """Grab an object by name or ID. You must move to the location containing 
+        the object first before grabbing it. Grabbing an object makes the object
+        the currently held object.
 
         Args:
             target: Either a string name of an object or a direct object ID.
@@ -42,7 +44,9 @@ class RobotToolkit(BaseToolkit):
         return result
 
     def place(self, target: Union[str, List[float]]) -> dict:
-        """Place the currently held object at a target location.
+        """Place the currently held object at a target location. You must move to 
+        the location first before placing the object there, and must also have an
+        object that is currently being held.
 
         Args:
             target: Either a string name of a location or [x, y, z] coordinates.

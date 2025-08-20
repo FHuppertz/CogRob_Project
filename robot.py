@@ -55,12 +55,13 @@ class Robot:
 		self._reset_path()
 
 		# Agent
-		system_message = "You are a robot assistant. Your goal is to help the user with their tasks.\n"
-		"You have the following tools available to you to assist with tasks:\n"
-		" - move_to: Move the robot base to a target location by name (str)\n"
-		" - grab: Pick up an object by name (str)\n"
-		" - place: Place the held object at the given location by name (str)\n"
+		system_message = """You are a robot assistant. Your goal is to help the user with their tasks.
 
+You have the following tools available to you to assist with tasks:
+- move_to: Move the robot base to a target location by name (str).
+- grab: Pick up an object by name (str). You must move to the location containing the object first before grabbing it. Successfully grabbing an object makes the object the currently held object.
+- place: Place the held object at the given location by name (str). You must move to the location first before placing the object there. Note that you must have a currently held item that you can place. Successfully placing an object will remove it from being the currently held object.
+"""
 		if model:
 			self.toolkit = RobotToolkit(self)
 			self.chat_agent = ChatAgent(
@@ -80,7 +81,8 @@ class Robot:
 	def invoke(self, task_prompt: str):
 		if self.chat_agent:
 			prompt = self.create_environment_prompt() + "\n"
-			response = self.chat_agent.step(prompt + task_prompt)
+			prompt += f"You are given the following task:\n<task>\n{task_prompt}\n</task>"
+			response = self.chat_agent.step(prompt)
 			print(f"Agent response:\n{response.msgs[0].content}")
 		else:
 			print("No chat agent available, please provide a model")
