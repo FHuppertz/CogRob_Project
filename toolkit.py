@@ -3,17 +3,20 @@ from camel.toolkits import FunctionTool, BaseToolkit
 
 if TYPE_CHECKING:
     from robot import Robot
+    from memory import Memory
 
 class RobotToolkit(BaseToolkit):
-    """Toolkit for robot actions like moving, grabbing, and placing objects."""
+    """Toolkit for robot actions like moving, grabbing, placing objects, and memory operations."""
 
-    def __init__(self, robot: 'Robot'):
-        """Initialize the toolkit with robot instance.
+    def __init__(self, robot: 'Robot', memory: 'Memory'):
+        """Initialize the toolkit with robot instance and memory.
 
         Args:
             robot: The Robot instance that will execute the actions
+            memory: The Memory instance for storing and retrieving memories
         """
         self.robot = robot
+        self.memory = memory
         super().__init__()
 
     def move_to(self, target: Union[str, List[float]]) -> dict:
@@ -76,7 +79,40 @@ class RobotToolkit(BaseToolkit):
             "summary": summary
         }
         print(f"Agent has finished task with result:\n{result}")
+        
+        # Store the task result in memory
+        metadata = {"status": status, "summary": summary}
+        self.memory.add_memory(description, metadata)
+        
         return result
+
+    def search_memory(self, query: str) -> dict:
+        """Search the robot's memory for relevant past tasks.
+
+        Args:
+            query: A query string to search for in the memory
+
+        Returns:
+            dict: Search results with status and list of matching memories
+        """
+        # Search for memories using the query
+        memories = self.memory.search_memories(query)
+        
+        # Format the results to be similar to finish_task output
+        formatted_results = []
+        for memory in memories:
+            formatted_result = {
+                "status": memory["metadata"].get("status", "unknown"),
+                "description": memory["content"],
+                "summary": memory["metadata"].get("summary", "")
+            }
+            formatted_results.append(formatted_result)
+        
+        return {
+            "status": "success",
+            "query": query,
+            "results": formatted_results
+        }
 
     def get_tools(self) -> list[FunctionTool]:
         """Get list of available tools."""
@@ -84,5 +120,6 @@ class RobotToolkit(BaseToolkit):
             FunctionTool(self.move_to),
             FunctionTool(self.grab),
             FunctionTool(self.place),
-            FunctionTool(self.finish_task)
+            FunctionTool(self.finish_task),
+            FunctionTool(self.search_memory)
         ]
