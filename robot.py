@@ -141,7 +141,7 @@ class Robot:
 		self.action_target = None
 
 		# Reset path irrespective of whether we were following one
-		self._reset_path
+		self._reset_path()
 
 		p.resetBaseVelocity(
 			self.base_id,
