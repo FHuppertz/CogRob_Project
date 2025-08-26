@@ -259,6 +259,38 @@ class World():
         # Add box to world objects
         self.add_object(box_id, "box")
 
+
+        # Create Mug
+        Mug_pos = np.array([6.0, 6.0, 2.0*0.3+0.1])
+        Mug_orientation = p.getQuaternionFromEuler([0.0, 0.0, 0])
+
+        Mug_scale = 0.1
+        half_size = np.array([1.4, 1, 1.0])*Mug_scale
+        Mug_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/Mug.obj", meshScale=[Mug_scale, Mug_scale, Mug_scale])
+        Mug_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
+        Mug_id = p.createMultiBody(
+            baseMass=0.01,
+            baseCollisionShapeIndex=-1,
+            baseVisualShapeIndex=Mug_visual,
+            basePosition=Mug_pos,
+            baseOrientation=Mug_orientation,      # Apply the rotation here
+
+            # Add links for each collision box
+            linkMasses=[0.01],
+            linkCollisionShapeIndices=[Mug_collision],
+            linkVisualShapeIndices=[empty_visual],
+            linkPositions=[[0.0,0.0,half_size[2]]],
+            linkOrientations=[[0,0,0,1]],
+            linkInertialFramePositions=[[0,0,0]],
+            linkInertialFrameOrientations=[[0,0,0,1]],
+            linkParentIndices=[0],
+            linkJointTypes=[p.JOINT_FIXED],
+            linkJointAxis=[[0, 0, 0]]
+        )
+        # Add TV to world objects
+        self.add_object(Mug_id, "mug")
+
+
         # Create TV
         TV_pos = np.array([8.0, -6.0, 0.0])
         TV_orientation = p.getQuaternionFromEuler([0.0, 0.0, np.pi])

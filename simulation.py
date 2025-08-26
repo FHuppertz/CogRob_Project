@@ -130,10 +130,19 @@ if __name__ == "__main__":
     print(world.get_current_location(robot.position))
 
     sim.step(100)
-    robot.grab("cube")
     print("Moving to Table")
     print(robot.move_to("Kitchen Table"))
-    robot.place("Kitchen Table", "Middle")
+    robot.grab("mug")
+    sim.step(100)
+    print("Moving to Kitchen Shelf")
+    print(robot.move_to("Kitchen Shelf"))
+    robot.place("Kitchen Shelf", "Middle")
+    sim.step(100)
+    robot.grab("cube")
+    sim.step(100)
+    print("Moving to Table")
+    print(robot.move_to("Kitchen Table"))
+    robot.place("Kitchen Table", "middle")
 
     # Move back to door using internal path planning
     print("Moving back to Front Door")
