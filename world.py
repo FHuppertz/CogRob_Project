@@ -202,6 +202,9 @@ class World():
                 "middle": [1,6,3.0*0.25+0.1],
                 "bottom": [1,6,1.5*0.25+0.1]
             }),
+            Location("Kitchen Table", [6.0, 5.0], {
+                "middle": [6.0, 6.0, 2.0*0.3+0.1]
+            }),
         ]
 
         # Add locations to world
@@ -216,7 +219,7 @@ class World():
         # world.add_next_to("Front Door", ["Kitchen Door, Living Room Door"])
 
         # Kitchen
-        world.add_next_to("Kitchen Area Left", ["Kitchen Door", "Kitchen Shelf"])
+        world.add_next_to("Kitchen Area Left", ["Kitchen Door", "Kitchen Shelf", "Kitchen Table"])
 
         return world
 
@@ -286,6 +289,35 @@ class World():
         # Add TV to world objects
         self.add_object(TV_id, "tv")
 
+        # Create Table
+        Table_pos = np.array([6.0, 6.0, 0.0])
+        Table_orientation = p.getQuaternionFromEuler([0.0, 0.0, np.pi/2])
+
+        Table_scale = 0.3
+        half_size = np.array([1.0, 1.5, 1.0])*Table_scale
+        Table_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/Table.obj", meshScale=[Table_scale, Table_scale, Table_scale])
+        Table_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
+        Table_id = p.createMultiBody(
+            baseMass=0,
+            baseCollisionShapeIndex=-1,
+            baseVisualShapeIndex=Table_visual,
+            basePosition=Table_pos,
+            baseOrientation=Table_orientation,      # Apply the rotation here
+
+            # Add links for each collision box
+            linkMasses=[0],
+            linkCollisionShapeIndices=[Table_collision],
+            linkVisualShapeIndices=[empty_visual],
+            linkPositions=[[0.0,0.0,half_size[2]]],
+            linkOrientations=[[0,0,0,1]],
+            linkInertialFramePositions=[[0,0,0]],
+            linkInertialFrameOrientations=[[0,0,0,1]],
+            linkParentIndices=[0],
+            linkJointTypes=[p.JOINT_FIXED],
+            linkJointAxis=[[0, 0, 0]]
+        )
+        # Add TV to world objects
+        self.add_object(Table_id, "table")
 
         # Define the location and rotation for the entire shelf
         shelf_location = np.array([1.0, 6.0, 0.0])
