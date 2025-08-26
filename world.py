@@ -215,6 +215,8 @@ class World():
         for loc in locations:
             world.add_location(loc)
 
+        world.get_location("Kitchen Table").get_place_position("middle").occupied = True
+
         ## Set up location relationships using the world's add_next_to method
         # Hallway
         world.add_next_to("Hallway Area Door", ["Front Door", "Kitchen Door", "Living Room Door"])

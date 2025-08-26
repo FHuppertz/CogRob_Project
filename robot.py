@@ -291,6 +291,12 @@ If you come across issues, think in detail about what may have caused them, and 
         target_pos, target_ori = p.getBasePositionAndOrientation(self.action_target)
         joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
 
+
+        target_location = None
+        for place in self.env.world.get_location(self.env.world.get_object_location(self.action_target)).place_positions.values():
+            if np.linalg.norm(np.array(place.center) - np.array(target_pos)) <= 0.15:
+                target_location = place
+
         # Get end-effector position
         ee_index = 6
         # Get gripper pose
@@ -298,6 +304,10 @@ If you come across issues, think in detail about what may have caused them, and 
 
         dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
         if dist < 0.5:
+
+            if target_location is not None:
+                target_location.occupied = False
+
             offset = np.array([0.25, 0, 0])
             # Constraints to simulate grabbing (modified ChatGPT)
             p.resetBasePositionAndOrientation(
@@ -406,7 +416,7 @@ If you come across issues, think in detail about what may have caused them, and 
             }
 
         # Set up place state
-        self.action_target = np.array(target_position)
+        self.action_target = [np.array(target_position), target_location]
         self.activity.add("place")
 
         # Run simulation until we place the object or timeout
@@ -441,9 +451,9 @@ If you come across issues, think in detail about what may have caused them, and 
 
     def handle_place(self):
         assert "place" in self.activity and self.action_target is not None
-        assert isinstance(self.action_target, np.ndarray) and len(self.action_target) == 3
+        #assert isinstance(self.action_target, np.ndarray) and len(self.action_target) == 3
 
-        placement_pos = self.action_target.copy()
+        placement_pos = self.action_target[0].copy()
 
         # Move arm to placement position
         joint_angles = p.calculateInverseKinematics(self.robot_id, 6, placement_pos)
@@ -462,12 +472,13 @@ If you come across issues, think in detail about what may have caused them, and 
         dist = np.linalg.norm(np.array(placement_pos) - np.array(ee_pos))
 
         if dist < 0.5:
+            self.action_target[1].occupied = True
             # Remove the constraint to release the object
             p.removeConstraint(self.constraint_id)
             self.constraint_id = None
 
             # Teleport the object to the exact target position
-            p.resetBasePositionAndOrientation(self.held_object_id, self.action_target, [0,0,0,1])
+            p.resetBasePositionAndOrientation(self.held_object_id, self.action_target[0], [0,0,0,1])
 
             self.held_object_id = None
             self.activity.remove("place")
