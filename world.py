@@ -3,6 +3,10 @@ import pybullet as p
 
 from typing import Dict, List, Optional, Union
 
+Mug_scale = 0.1
+Table_scale = 0.5
+TV_scale = 0.8
+Shelf_scale = 0.25
 
 class Location():
     def __init__(self,
@@ -198,12 +202,12 @@ class World():
             ## Kitchen
             Location("Kitchen Area Left", [3,4]),
             Location("Kitchen Shelf", [1,4.85], {
-                "top": [1,6,4.5*0.25+0.1],
-                "middle": [1,6,3.0*0.25+0.1],
-                "bottom": [1,6,1.5*0.25+0.1]
+                "top": [1,6,4.5*Shelf_scale+0.1],
+                "middle": [1,6,3.0*Shelf_scale+0.1],
+                "bottom": [1,6,1.5*Shelf_scale+0.1]
             }),
             Location("Kitchen Table", [6.0, 5.0], {
-                "middle": [6.0, 6.0, 2.0*0.3+0.1]
+                "middle": [6.0, 6.0, 2.0*Table_scale+0.1]
             }),
         ]
 
@@ -264,7 +268,6 @@ class World():
         Mug_pos = np.array([6.0, 6.0, 2.0*0.3+0.1])
         Mug_orientation = p.getQuaternionFromEuler([0.0, 0.0, 0])
 
-        Mug_scale = 0.1
         half_size = np.array([1.4, 1, 1.0])*Mug_scale
         Mug_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/Mug.obj", meshScale=[Mug_scale, Mug_scale, Mug_scale])
         Mug_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
@@ -295,7 +298,6 @@ class World():
         TV_pos = np.array([8.0, -6.0, 0.0])
         TV_orientation = p.getQuaternionFromEuler([0.0, 0.0, np.pi])
 
-        TV_scale = 0.8
         half_size = np.array([1.35, 1, 1.3])*TV_scale
         TV_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/TV.obj", meshScale=[TV_scale, TV_scale, TV_scale])
         TV_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
@@ -325,7 +327,6 @@ class World():
         Table_pos = np.array([6.0, 6.0, 0.0])
         Table_orientation = p.getQuaternionFromEuler([0.0, 0.0, np.pi/2])
 
-        Table_scale = 0.3
         half_size = np.array([1.0, 1.5, 1.0])*Table_scale
         Table_visual = p.createVisualShape(p.GEOM_MESH, fileName="./models/Table.obj", meshScale=[Table_scale, Table_scale, Table_scale])
         Table_collision = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_size)
@@ -353,26 +354,25 @@ class World():
 
         # Define the location and rotation for the entire shelf
         shelf_location = np.array([1.0, 6.0, 0.0])
-        shelf_scale = 0.25
 
         shelf_orientation = p.getQuaternionFromEuler([0, 0, np.pi])
 
         # Collision shapes for the simplified planes (links)
         # Define half-extents for plates and supports
-        plate_dims = np.array([3.0, 2.0, 0.02])*shelf_scale
-        support_dims_side = np.array([1/3, 2.0, 6.0])*shelf_scale
-        support_dims_back = np.array([3.0, 1/3, 6.0])*shelf_scale
+        plate_dims = np.array([3.0, 2.0, 0.02])*Shelf_scale
+        support_dims_side = np.array([1/3, 2.0, 6.0])*Shelf_scale
+        support_dims_back = np.array([3.0, 1/3, 6.0])*Shelf_scale
 
 
         plate_pos = [
-            [0, 0, 1.5*shelf_scale],  # Bottom shelf
-            [0, 0, 3.0*shelf_scale],  # Middle shelf
-            [0, 0, 4.5*shelf_scale]   # Top shelf
+            [0, 0, 1.5*Shelf_scale],  # Bottom shelf
+            [0, 0, 3.0*Shelf_scale],  # Middle shelf
+            [0, 0, 4.5*Shelf_scale]   # Top shelf
         ]
         support_pos = [
-            np.array([-1.5, 0, 3.0])*shelf_scale,   # Left support
-            np.array([1.5, 0, 3.0])*shelf_scale,    # Right support
-            np.array([0, -5/6, 3.0])*shelf_scale    # Back support
+            np.array([-1.5, 0, 3.0])*Shelf_scale,   # Left support
+            np.array([1.5, 0, 3.0])*Shelf_scale,    # Right support
+            np.array([0, -5/6, 3.0])*Shelf_scale    # Back support
         ]
 
         # Create collision shapes for the plates and supports
@@ -382,7 +382,7 @@ class World():
 
 
         # Create the visual shape from your Blender mesh
-        visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Shelf.obj", meshScale=[shelf_scale, shelf_scale, shelf_scale])
+        visual_shelf_id = p.createVisualShape(p.GEOM_MESH, fileName="./models/Shelf.obj", meshScale=[Shelf_scale, Shelf_scale, Shelf_scale])
 
         # Create the multibody object
         # This is where we apply the location and orientation to the base
