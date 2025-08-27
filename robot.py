@@ -110,7 +110,7 @@ If you come across issues or ambiguities, think in detail about what may have ca
         # Add current semantic location information
         current_location = self.env.world.get_current_location(self.position)
         if current_location:
-            environment_description += f"\n\nYou are currently at semantic location: {current_location}"
+            environment_description += f"\nYou are currently at location: {current_location}\n"
 
         return environment_description
 
