@@ -5,7 +5,7 @@ import pybullet_data
 import time
 
 from camel.models import ModelFactory
-from camel.types import ModelPlatformType
+from camel.types import ModelPlatformType, ModelType
 
 from world import World
 from robot import Robot
@@ -97,11 +97,19 @@ if __name__ == "__main__":
     sim.world.create_default_physical_objects()
 
     # Add a subscriber (e.g., a robot)
-    if os.environ.get("OPENAI_API_KEY", None):
+    if os.environ.get("OPENAI_API_KEY", None) or os.getenv("ANTHROPIC_API_KEY"):
+        # model = ModelFactory.create(
+        #   model_platform=ModelPlatformType.OPENAI,
+        #   model_type="gpt-4.1",
+        #   model_config_dict={"temperature": 0.5},
+        # )
         model = ModelFactory.create(
-          model_platform=ModelPlatformType.OPENAI,
-          model_type="gpt-4.1-mini",
-          model_config_dict={"temperature": 0.0},
+            model_platform=ModelPlatformType.ANTHROPIC,
+            model_type=ModelType.CLAUDE_3_5_SONNET,
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            # model_config_dict={
+            #     "temperature": 0.5
+            # }
         )
     else:
         model = None
@@ -112,41 +120,41 @@ if __name__ == "__main__":
     # Run the simulation
     sim.step(200)
 
-    # Give the robot commands
-    robot.grab("cube")
+    # # Give the robot commands
+    robot.grab("box")
 
-    # Move to kitchen shelf using internal path planning
-    print("Moving to Kitchen Shelf")
-    print(robot.move_to("Kitchen Shelf"))
+    # # Move to kitchen shelf using internal path planning
+    # print("Moving to Kitchen Shelf")
+    # print(robot.move_to("Kitchen Shelf"))
 
-    # Place the cube at the shelf
-    robot.place("Kitchen Shelf", "Bottom")
-    sim.step(100)
-    robot.grab("cube")
-    sim.step(100)
-    robot.place("Kitchen Shelf", "Top")
+    # # Place the cube at the shelf
+    # robot.place("Kitchen Shelf", "Bottom")
+    # sim.step(100)
+    # robot.grab("cube")
+    # sim.step(100)
+    # robot.place("Kitchen Shelf", "Top")
 
-    print("Current location of robot:")
-    print(world.get_current_location(robot.position))
+    # print("Current location of robot:")
+    # print(world.get_current_location(robot.position))
 
-    sim.step(100)
-    print("Moving to Table")
-    print(robot.move_to("Kitchen Table"))
-    robot.grab("mug")
-    sim.step(100)
-    print("Moving to Kitchen Shelf")
-    print(robot.move_to("Kitchen Shelf"))
-    robot.place("Kitchen Shelf", "Middle")
-    sim.step(100)
-    robot.grab("cube")
-    sim.step(100)
-    print("Moving to Table")
-    print(robot.move_to("Kitchen Table"))
-    robot.place("Kitchen Table", "middle")
+    # sim.step(100)
+    # print("Moving to Table")
+    # print(robot.move_to("Kitchen Table"))
+    # robot.grab("mug")
+    # sim.step(100)
+    # print("Moving to Kitchen Shelf")
+    # print(robot.move_to("Kitchen Shelf"))
+    # robot.place("Kitchen Shelf", "Middle")
+    # sim.step(100)
+    # robot.grab("cube")
+    # sim.step(100)
+    # print("Moving to Table")
+    # print(robot.move_to("Kitchen Table"))
+    # robot.place("Kitchen Table", "middle")
 
-    # Move back to door using internal path planning
-    print("Moving back to Front Door")
-    print(robot.move_to("Front Door"))
+    # # Move back to door using internal path planning
+    # print("Moving back to Front Door")
+    # print(robot.move_to("Front Door"))
 
     # Delay before invoking the robot's agent
     sim.step(100)
