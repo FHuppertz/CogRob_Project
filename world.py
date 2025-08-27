@@ -25,7 +25,7 @@ class Location():
             self.add_place_positions(place_position)
         self.neighbours: List['Location']= []
 
-        self.occupied = False
+        self.occupied_by: Optional[str] = None  # Store the name of the object placed here, or None if empty
 
     def next_to(self, neighbours: List['Location']) -> None:
         for neighbour in neighbours:
@@ -72,12 +72,12 @@ class World():
 
     def get_object(self, name: str) -> Optional[int]:
         return self.objects.get(name.lower())
-    
+
     def get_object_by_id(self, object_id: int) -> Optional[str]:
         object_names = [obj_name for obj_name, obj_id in self.objects.items() if object_id == obj_id]
         if object_names:
             return object_names[0]
-        
+
         return None
 
     def get_current_location(self, position):
@@ -101,7 +101,7 @@ class World():
         try:
             pos, _ = p.getBasePositionAndOrientation(object_id)
             return self.get_current_location(pos)
-        except ValueError as e:
+        except ValueError:
             print(f"Object of id {object_id} could not be found in the world")
             raise ValueError(f"Object of id {object_id} could not be found in the world")
 
@@ -184,8 +184,11 @@ class World():
             place_positions_in_location = location.place_positions.keys()
             if place_positions_in_location:
                 description += "  - Place positions in location:\n"
-                for place_name in place_positions_in_location:
-                    description += f"    - {place_name}\n"
+                for place_name, place_position in location.place_positions.items():
+                    if place_position.occupied_by is not None:
+                        description += f"    - {place_name}: occupied by {place_position.occupied_by}\n"
+                    else:
+                        description += f"    - {place_name}: empty\n"
 
             if location.neighbours:
                 description += "  - Neighbouring Locations:\n"
@@ -228,7 +231,11 @@ class World():
         for loc in locations:
             world.add_location(loc)
 
-        world.get_location("Kitchen Table").get_place_position("middle").occupied = True
+        table_location = world.get_location("Kitchen Table")
+        if table_location:
+            table_place_location = table_location.get_place_position("middle")
+            if table_place_location is not None:
+                table_place_location.occupied_by = "mug"
 
         ## Set up location relationships using the world's add_next_to method
         # Hallway

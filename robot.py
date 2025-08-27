@@ -65,7 +65,7 @@ You have the following tools available to you to assist with tasks:
 - finish_task: Finish the current task with a status report. Use this tool when you have completed the task or determined that it cannot be completed. Provide a status (success, failure, or unknown), a description of the original task including its status, and a detailed summary of the execution trace. Be sure to provide all information about the task execution, not missing details on any steps of the task execution.
 - search_memory: Search your memory for previously completed tasks that might be relevant to the current task. Use this tool when you need information from past experiences to help with the current task. Always use this tool to check for previous experiences when starting a task.
 
-If you come across issues, think in detail about what may have caused them, and take alternative approaches or measures to complete the task. Be agentic, and have a problem-solving approach to performing the task at hand. You should perform tasks with minimal additional supervision.
+If you come across issues or ambiguities, think in detail about what may have caused them, and take alternative approaches or measures to complete the task. Be agentic, and have a problem-solving approach to performing the task at hand. You should perform tasks with minimal additional supervision.
 """
         if model:
             self.memory = Memory()
@@ -87,7 +87,9 @@ If you come across issues, think in detail about what may have caused them, and 
     def invoke(self, task_prompt: str):
         if self.chat_agent:
             prompt = self.create_environment_prompt() + "\n"
-            prompt += f"You are given the following task:\n<task>\n{task_prompt}\n</task>"
+            prompt += "You are given the following task, which may be a new task, or relate " + \
+                "to/be a continuation of a previous task in this session:\n" + \
+                f"<task>\n{task_prompt}\n</task>"
 
             print(f"Invoking agent with prompt:\n{prompt}")
             response = self.chat_agent.step(prompt)
@@ -104,6 +106,12 @@ If you come across issues, think in detail about what may have caused them, and 
         """
         environment_description = ""
         environment_description += self.env.world.get_locations_description()
+
+        # Add current semantic location information
+        current_location = self.env.world.get_current_location(self.position)
+        if current_location:
+            environment_description += f"\n\nYou are currently at semantic location: {current_location}"
+
         return environment_description
 
     def move_to(self, target):
@@ -316,7 +324,7 @@ If you come across issues, think in detail about what may have caused them, and 
         if dist < 0.5:
 
             if target_location is not None:
-                target_location.occupied = False
+                target_location.occupied_by = None
 
             offset = np.array([0.25, 0, 0])
             # Constraints to simulate grabbing (modified ChatGPT)
@@ -407,11 +415,11 @@ If you come across issues, think in detail about what may have caused them, and 
                 }
             else:
                 target_position = target_location.center
-                if target_location.occupied:
+                if target_location.occupied_by is not None:
                     return {
                         "status": "failure",
                         "message": f"The provided place position {place_position} "
-                            f"in {location} is occupied"
+                            f"in {location} is occupied by {target_location.occupied_by}"
                     }
         else:
             return {
@@ -483,7 +491,10 @@ If you come across issues, think in detail about what may have caused them, and 
         dist = np.linalg.norm(np.array(placement_pos) - np.array(ee_pos))
 
         if dist < 0.5:
-            self.action_target[1].occupied = True
+            # Get the name of the object being placed
+            object_name = self.env.world.get_object_by_id(self.held_object_id)
+            self.action_target[1].occupied_by = object_name
+
             # Remove the constraint to release the object
             p.removeConstraint(self.constraint_id)
             self.constraint_id = None
