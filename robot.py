@@ -2,7 +2,7 @@ import pybullet as p
 import numpy as np
 
 from camel.agents import ChatAgent
-from typing import TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING
 
 from toolkit import RobotToolkit
 from memory import Memory
@@ -65,7 +65,7 @@ You have the following tools available to you to assist with tasks:
 - finish_task: Finish the current task with a status report. Use this tool when you have completed the task or determined that it cannot be completed. Provide a status (success, failure, or unknown), a description of the original task including its status, and a detailed summary of the execution trace. Be sure to provide all information about the task execution, not missing details on any steps of the task execution.
 - search_memory: Search your memory for previously completed tasks that might be relevant to the current task. Use this tool when you need information from past experiences to help with the current task. Always use this tool to check for previous experiences when starting a task.
 
-If you come across issues, think in detail about what may have caused them, and take alternative approaches or measures to complete the task.
+If you come across issues, think in detail about what may have caused them, and take alternative approaches or measures to complete the task. Be agentic, and have a problem-solving approach to performing the task at hand. You should perform tasks with minimal additional supervision.
 """
         if model:
             self.memory = Memory()
@@ -119,7 +119,7 @@ If you come across issues, think in detail about what may have caused them, and 
             str: 'success' if movement was successful, 'failure' otherwise
         """
         current_location_name = self.env.world.get_current_location(self.position)
-        print(f"Current location: {current_location_name}; Target location: {target}")
+        print(f"Robot is moving from current location: {current_location_name}; Target location: {target}")
 
         # Handle both location names and direct positions
         if isinstance(target, str):
@@ -225,7 +225,7 @@ If you come across issues, think in detail about what may have caused them, and 
         self.path = []
         self.waypoint_index = 0
 
-    def grab(self, target_name_or_id):
+    def grab(self, target_name_or_id) -> Dict[str, str]:
         """
         Grab an object by name or ID. Initiates grabbing through setting the
         target object and activating the grab state. Grabbing is handled by
@@ -237,6 +237,7 @@ If you come across issues, think in detail about what may have caused them, and 
         Returns:
             str: 'success' if grabbing was successful, 'failure' otherwise
         """
+        print(f"Robot is trying to grab item {target_name_or_id}")
         # Handle both object names and direct IDs
         if isinstance(target_name_or_id, str):
             target_id = self.env.world.get_object(target_name_or_id)
@@ -250,6 +251,14 @@ If you come across issues, think in detail about what may have caused them, and 
             target_id = target_name_or_id
 
         # Set up grab state
+        if self.held_object_id is not None:
+            held_object_name = self.env.world.get_object_by_id(self.held_object_id)
+            print(f"Robot is already holding object {held_object_name}")
+            return {
+                'status': 'failure',
+                'message': f'You are currently holding {held_object_name}, and cannot hold more than one item at once'
+            }
+
         self.action_target = target_id
         self.activity.add("grab")
 
@@ -265,7 +274,6 @@ If you come across issues, think in detail about what may have caused them, and 
         # Timeout - failed to grab
         self.activity.remove("grab")
         self.action_target = None
-        p.changeConstraint(self.constraint_id, maxForce=500, erp=1.0)
 
         # Move Gripper up
         pos = np.array(self.position)
@@ -279,6 +287,9 @@ If you come across issues, think in detail about what may have caused them, and 
                                     velocityGain=1.0,
                                     maxVelocity=2.0
             )
+        for _ in range(100):
+            self.env.step(1)
+
         return {
             'status': 'timeout',
             'message': 'Timed out trying to grab object'
@@ -290,7 +301,6 @@ If you come across issues, think in detail about what may have caused them, and 
 
         target_pos, target_ori = p.getBasePositionAndOrientation(self.action_target)
         joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
-
 
         target_location = None
         for place in self.env.world.get_location(self.env.world.get_object_location(self.action_target)).place_positions.values():
@@ -380,6 +390,7 @@ If you come across issues, think in detail about what may have caused them, and 
         Returns:
             str: 'success' if placement was successful, 'failure' otherwise
         """
+        print(f"Robot is trying to place {self.env.world.get_object_by_id(self.held_object_id)} to {location}")
         if loc := self.env.world.get_location(location):
             target_position = None
             if place_position is None:
