@@ -72,6 +72,13 @@ class World():
 
     def get_object(self, name: str) -> Optional[int]:
         return self.objects.get(name.lower())
+    
+    def get_object_by_id(self, object_id: int) -> Optional[str]:
+        object_names = [obj_name for obj_name, obj_id in self.objects.items() if object_id == obj_id]
+        if object_names:
+            return object_names[0]
+        
+        return None
 
     def get_current_location(self, position):
         """Get the current location of the robot."""
@@ -91,8 +98,12 @@ class World():
 
     def get_object_location(self, object_id: int) -> Optional[str]:
         """Get the location name of an object based on its position."""
-        pos, _ = p.getBasePositionAndOrientation(object_id)
-        return self.get_current_location(pos)
+        try:
+            pos, _ = p.getBasePositionAndOrientation(object_id)
+            return self.get_current_location(pos)
+        except ValueError as e:
+            print(f"Object of id {object_id} could not be found in the world")
+            raise ValueError(f"Object of id {object_id} could not be found in the world")
 
     def get_objects_by_location(self) -> Dict[str, List[str]]:
         """Get a mapping of location names to lists of object names in those locations."""
@@ -198,6 +209,8 @@ class World():
             Location("Front Door", [0,0]),
             Location("Kitchen Door", [3,2]),
             Location("Living Room Door", [3,-2]),
+            Location("Living Room TV", [8.0, -4.5]),
+            Location("Living Room", [4.0, -3.0]),
 
             ## Kitchen
             Location("Kitchen Area Left", [3,4]),
@@ -226,6 +239,10 @@ class World():
 
         # Kitchen
         world.add_next_to("Kitchen Area Left", ["Kitchen Door", "Kitchen Shelf", "Kitchen Table"])
+
+        # Living room
+        world.add_next_to("Living Room", ["Living Room Door", "Living Room TV"])
+
 
         return world
 
