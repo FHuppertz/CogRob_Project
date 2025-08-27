@@ -95,6 +95,7 @@ class RobotToolkit(BaseToolkit):
         Returns:
             dict: Search results with status and list of matching memories
         """
+        print(f"Robot is querying memories with the query: {query}")
         # Search for memories using the query
         memories = self.memory.search_memories(query)
         
@@ -107,6 +108,8 @@ class RobotToolkit(BaseToolkit):
                 "summary": memory["metadata"].get("summary", "")
             }
             formatted_results.append(formatted_result)
+        print("The query returned the following results:")
+        [print(formatted_result) for formatted_result in formatted_results]
         
         return {
             "status": "success",
