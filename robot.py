@@ -83,6 +83,27 @@ If you come across issues or ambiguities, think in detail about what may have ca
     def position(self):
         pos, ori = p.getBasePositionAndOrientation(self.base_id)
         return pos
+    
+    def _step(self, message):
+        """Internal method to handle agent stepping with optional streaming."""
+        # Check if streaming is enabled
+        # Try to access model configuration similar to reference code
+        stream = self.chat_agent.model_backend.model_config_dict.get("stream", False)
+
+        if stream:
+            response = None
+            previous_length = 0
+            print("Generating streaming response...")
+            for i, response in enumerate(self.chat_agent.step(message)):
+                if msgs := getattr(response, "msgs"):
+                    current_content = msgs[0].content
+                    print(current_content[previous_length:], end="", flush=True)
+                    previous_length = len(current_content)
+            print()
+        else:
+            response = self.chat_agent.step(message)
+
+        return response
 
     def invoke(self, task_prompt: str):
         if self.chat_agent:
@@ -92,7 +113,7 @@ If you come across issues or ambiguities, think in detail about what may have ca
                 f"<task>\n{task_prompt}\n</task>"
 
             print(f"Invoking agent with prompt:\n{prompt}")
-            response = self.chat_agent.step(prompt)
+            response = self._step(prompt)
             print(f"Agent response:\n{response.msgs[0].content}")
         else:
             print("No chat agent available, please provide a model")
