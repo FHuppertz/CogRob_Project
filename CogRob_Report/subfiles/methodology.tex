@@ -1,0 +1,28 @@
+%!TEX root = ../report.tex
+\documentclass[../report.tex]{subfiles}
+
+\begin{document}
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Simulation}
+The agent and it's environment are simulated in the physics simulator PyBullet. The agents body is a mobile manipulator consisting of a square base with omnidirectional movement and an 7 Degrees-of-Freedom robot arm,
+a modified version of the Kuka (??????) robot arm. The modifications consist of disableing limitations in is rotation, so the arm can reach all around its base. Furthermore, the arm does not have a fully simulated gripper,
+instead grabbing and placing is simplified to attaching object to the arm and teleporting them to desired locations when the arm is in close proximity. \\
+PICTURE OF THE AGENT \\
+The environment consists of a simple two room household, one kitchen and one livingroom. The kitchen contains a three layered shelf as well as a table which are capable of holding items. The living room contains a TV on a table.
+Both rooms are connected via a hallway. \\
+PICTURE OF THE ROOMS \\
+To allow the agent to interact with the environment and the items in it, it has multiple tools it can call. All of these tool calls are done via the LLMs tool calling and return status messages in text form.
+The implemented tools are as follows: \\
+\begin{itemize}
+	\item \textbf{Percieve} The agent percieves its surroundings and the tool call returns in which location it is on an semantic map of the environment as well as what objects are in said location (check more closely).
+	\item \textbf{Move To} The agent can pick a goal location on the semantic map, like in front of the shelf, and first a valid path in the semantic map is searched via the A* algorithm and if a valid path is found the agent
+	      will move along the path to the goal and the tool call returns that the goal has been reached. If no valid path is found, this tool returns a failure.
+	\item \textbf{Grab} The agent specifies an item it wants to grab and this toll will move the robot arm towards the specified items location. If the end-effector of the arm comes close enough to the item it will be attach to it and
+	      the tool call will return a successful grab. This tool call can fail if the item to be grabbed does not exist, if the robot is already holding an item, or if the item is out of reach of the robot. All these failures return the fail condition as well.
+	\item \textbf{Place} This tool call allows the agent to place the item it is currently holding in a specified place location, for example the middle (plane??) of the shelf. A sucessful place will occur if the agent is holding an item,
+	      the place location is empty (no other item is present), and the end-effector of the arm comes close enough to the place location. If any of these conditions are not met the tool call returns a failure specifing which condition was violated.
+\end{itemize}
+
+\end{document}
