@@ -17,6 +17,7 @@ class RobotToolkit(BaseToolkit):
         """
         self.robot = robot
         self.memory = memory
+        self.scratchpad = []  # List to store scratchpad entries
         super().__init__()
 
     def move_to(self, target: Union[str, List[float]]) -> dict:
@@ -117,6 +118,42 @@ class RobotToolkit(BaseToolkit):
             "results": formatted_results
         }
 
+    def add_to_scratchpad(self, entry: str) -> dict:
+        """Add an entry to the scratchpad for reasoning and reflection.
+        
+        Args:
+            entry (str): A string entry to add to the scratchpad
+            
+        Returns:
+            dict: Confirmation of the addition with status
+        """
+        self.scratchpad.append(entry)
+        return {
+            "status": "success",
+            "message": f"Added entry to scratchpad. Current scratchpad has {len(self.scratchpad)} entries."
+        }
+
+    def view_scratchpad(self) -> dict:
+        """View the current scratchpad contents joined as paragraphs.
+        
+        Returns:
+            dict: The scratchpad contents with status
+        """
+        if not self.scratchpad:
+            return {
+                "status": "success",
+                "message": "Scratchpad is empty.",
+                "content": ""
+            }
+            
+        # Join entries into paragraphs (separated by blank lines)
+        content = "\n\n".join(self.scratchpad)
+        return {
+            "status": "success",
+            "message": f"Scratchpad contains {len(self.scratchpad)} entries.",
+            "content": content
+        }
+
     def get_tools(self) -> list[FunctionTool]:
         """Get list of available tools."""
         return [
@@ -124,5 +161,7 @@ class RobotToolkit(BaseToolkit):
             FunctionTool(self.grab),
             FunctionTool(self.place),
             FunctionTool(self.finish_task),
-            FunctionTool(self.search_memory)
+            FunctionTool(self.search_memory),
+            FunctionTool(self.add_to_scratchpad),
+            FunctionTool(self.view_scratchpad)
         ]
