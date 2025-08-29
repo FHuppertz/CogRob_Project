@@ -31,7 +31,7 @@ class TimeStepController:
             time.sleep(self.dt)
 
 class SimulationEnvironment:
-    def __init__(self, world):
+    def __init__(self, world: 'World'):
         # Initialize PyBullet
         self.physics_client = p.connect(p.GUI)
         p.setGravity(0, 0, -9.8)
@@ -97,11 +97,19 @@ if __name__ == "__main__":
     sim.world.create_default_physical_objects()
 
     # Add a subscriber (e.g., a robot)
-    if os.environ.get("OPENAI_API_KEY", None):
+    if os.environ.get("OPENAI_API_KEY", None) or os.getenv("ANTHROPIC_API_KEY"):
+        # model = ModelFactory.create(
+        #   model_platform=ModelPlatformType.OPENAI,
+        #   model_type="gpt-4.1",
+        #   model_config_dict={"temperature": 0.5},
+        # )
         model = ModelFactory.create(
-          model_platform=ModelPlatformType.OPENAI,
-          model_type="gpt-4.1-mini",
-          model_config_dict={"temperature": 0.0},
+            model_platform=ModelPlatformType.ANTHROPIC,
+            model_type=ModelType.CLAUDE_3_5_SONNET,
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            # model_config_dict={
+            #     "temperature": 0.5
+            # }
         )
     else:
         model = None
@@ -112,28 +120,68 @@ if __name__ == "__main__":
     # Run the simulation
     sim.step(200)
 
-    # Give the robot commands
-    robot.grab("cube")
+    # # Give the robot commands
+    robot.grab("box")
 
-    for way_point in sim.world.get_path_between("door", "stove"):
-        print(f"Moving to {way_point}")
-        print(robot.move_to(way_point))
+    # # Move to kitchen shelf using internal path planning
+    # print("Moving to Kitchen Shelf")
+    # print(robot.move_to("Kitchen Shelf"))
 
-    for way_point in sim.world.get_path_between("stove", "tv"):
-        print(f"Moving to {way_point}")
-        print(robot.move_to(way_point))
+    # # Place the cube at the shelf
+    # robot.place("Kitchen Shelf", "Bottom")
+    # sim.step(100)
+    # robot.grab("cube")
+    # sim.step(100)
+    # robot.place("Kitchen Shelf", "Top")
 
-    # Place the cube at the tv location
-    robot.place("tv")
+    # print("Current location of robot:")
+    # print(world.get_current_location(robot.position))
+
+    # sim.step(100)
+    # print("Moving to Table")
+    # print(robot.move_to("Kitchen Table"))
+    # robot.grab("mug")
+    # sim.step(100)
+    # print("Moving to Kitchen Shelf")
+    # print(robot.move_to("Kitchen Shelf"))
+    # robot.place("Kitchen Shelf", "Middle")
+    # sim.step(100)
+    # robot.grab("cube")
+    # sim.step(100)
+    # print("Moving to Table")
+    # print(robot.move_to("Kitchen Table"))
+    # robot.place("Kitchen Table", "middle")
+
+    # # Move back to door using internal path planning
+    # print("Moving back to Front Door")
+    # print(robot.move_to("Front Door"))
 
     # Delay before invoking the robot's agent
-    sim.step(1000)
+    sim.step(100)
 
-    # Invoke the robot's agent
-    robot.invoke("Please pick up the cube, move to the door and place the cube")
-
-    # Step the simulation again
-    sim.step(1000)
-
+    # Interactive CLI for sending commands to the robot
+    try:
+        while True:
+            # Get user input
+            task_prompt = input("Enter a task for the robot (or 'quit' to exit): ")
+            
+            # Check if user wants to quit
+            if task_prompt.lower() in ['quit', 'exit', 'q']:
+                print("Exiting simulation...")
+                break
+            
+            # Skip empty prompts
+            if not task_prompt.strip():
+                continue
+            
+            # Invoke the robot's agent with the user's task
+            robot.invoke(task_prompt)
+            
+            # Delay at end
+            sim.step(100)
+            
+    except KeyboardInterrupt:
+        print("\nSimulation interrupted by user.")
+    
     # Disconnect from PyBullet
     sim.disconnect()
