@@ -6,23 +6,32 @@
 \label{sec:methodology}
 
 \subsection{Simulation}
-The agent and it's environment are simulated in the physics simulator PyBullet. The agents body is a mobile manipulator consisting of a square base with omnidirectional movement and an 7 Degrees-of-Freedom robot arm,
-a modified version of the Kuka (??????) robot arm. The modifications consist of disableing limitations in is rotation, so the arm can reach all around its base. Furthermore, the arm does not have a fully simulated gripper,
-instead grabbing and placing is simplified to attaching object to the arm and teleporting them to desired locations when the arm is in close proximity. \\
-PICTURE OF THE AGENT \\
-The environment consists of a simple two room household, one kitchen and one livingroom. The kitchen contains a three layered shelf as well as a table which are capable of holding items. The living room contains a TV on a table.
-Both rooms are connected via a hallway. \\
-PICTURE OF THE ROOMS \\
-To allow the agent to interact with the environment and the items in it, it has multiple tools it can call. All of these tool calls are done via the LLMs tool calling and return status messages in text form.
-The implemented tools are as follows: \\
+The agent and its environment were simulated using the PyBullet physics engine. As PyBullet is a Python module, it's functionality can be directly integrated in any python script. This allows precise control over the simulation and its interaction with external tool calls. PyBullet also comes with methods to create custom objects as well as a fully implemented robotic arm, the KUKA iiwa model. These methods and the KUKA iiwa robotic arm where used to create the agents embodiment and the environment it can act in. \\
+The agent's body is modeled as a mobile manipulator, consisting of a square omnidirectional base and a 7-DoF robotic arm derived from the KUKA iiwa model.
+To increase maneuverability, the rotational joint limits of the arms joint connecting the base to the arm were disabled, enabling full 360° reach around the base. A fully articulated gripper was not implemented. Instead, grasping and placing were simplified by attaching objects directly to the end-effector when within a predefined proximity threshold, and detaching them at the desired placement location, as illustrated in Fig.~\ref{fig:agent}.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.45\textwidth]{figures/agent.png}
+	\caption{The simulated mobile manipulator consisting of a square omnidirectional base and a 7-DoF arm.}
+	\label{fig:agent}
+\end{figure}
+
+The environment was designed as a simplified two-room household, comprising a kitchen and a living room. The kitchen contains a three-layer shelf and a table, both capable of supporting objects. The living room contains a television placed on a table. The two rooms are connected by a hallway, as shown in Fig.~\ref{fig:environment}.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.45\textwidth]{figures/environment.png}
+	\caption{The simulated household environment consisting of a kitchen, a living room, and a connecting hallway.}
+	\label{fig:environment}
+\end{figure}
+
+To interact with the environment and its objects, the agent was equipped with several tool functions, each exposed through a tool-calling interface with text-based status responses. The implemented tools are summarized below:
 \begin{itemize}
-	\item \textbf{Percieve} The agent percieves its surroundings and the tool call returns in which location it is on an semantic map of the environment as well as what objects are in said location (check more closely).
-	\item \textbf{Move To} The agent can pick a goal location on the semantic map, like in front of the shelf, and first a valid path in the semantic map is searched via the A* algorithm and if a valid path is found the agent
-	      will move along the path to the goal and the tool call returns that the goal has been reached. If no valid path is found, this tool returns a failure.
-	\item \textbf{Grab} The agent specifies an item it wants to grab and this toll will move the robot arm towards the specified items location. If the end-effector of the arm comes close enough to the item it will be attach to it and
-	      the tool call will return a successful grab. This tool call can fail if the item to be grabbed does not exist, if the robot is already holding an item, or if the item is out of reach of the robot. All these failures return the fail condition as well.
-	\item \textbf{Place} This tool call allows the agent to place the item it is currently holding in a specified place location, for example the middle (plane??) of the shelf. A sucessful place will occur if the agent is holding an item,
-	      the place location is empty (no other item is present), and the end-effector of the arm comes close enough to the place location. If any of these conditions are not met the tool call returns a failure specifing which condition was violated.
+	\item \textbf{Perceive:} Returns the agent’s location on a semantic map of the environment, as well as a list of objects detected in the current location.
+	\item \textbf{Move To:} Executes navigation to a goal location on the semantic map. Path planning is performed using the A* algorithm; if a valid path is found, the agent follows it until the goal is reached. If no path is available, the tool reports failure.
+	\item \textbf{Grab:} Moves the robot arm toward a specified target object. If the end-effector reaches within a proximity threshold, the object is attached to the arm, and the tool reports success. Failure is reported if the target object does not exist, is out of reach, or if the agent is already holding an object.
+	\item \textbf{Place:} Allows the agent to release the currently held object at a specified location. Placement succeeds if the end-effector reaches the designated location, the location is unoccupied, and the agent is holding an object. Otherwise, the tool reports failure, specifying the violated condition.
 \end{itemize}
 
 \end{document}
