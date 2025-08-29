@@ -107,9 +107,10 @@ if __name__ == "__main__":
             model_platform=ModelPlatformType.ANTHROPIC,
             model_type=ModelType.CLAUDE_3_5_SONNET,
             api_key=os.getenv("ANTHROPIC_API_KEY"),
-            # model_config_dict={
-            #     "temperature": 0.5
-            # }
+            model_config_dict={
+                # "temperature": 0.5,
+                "stream": True
+            }
         )
     else:
         model = None
