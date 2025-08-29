@@ -1,0 +1,28 @@
+%!TEX root = ../report.tex
+\documentclass[../report.tex]{subfiles}
+
+\begin{document}
+    \section{Related Work}
+    \label{sec:related_work}
+
+    This project draws on multiple domains:
+
+    \subsection{Cognitive Architectures}
+    Cognitive architectures such as SOAR, which integrates symbolic reasoning with perceptual and motor systems for cognitive robotics \cite{soar}, and ACT-R, which offers a hybrid symbolic-subsymbolic framework for modeling human cognition \cite{actr}.
+
+    \subsection{Embodied AI and Reinforcement Learning}
+    Embodied-AI and reinforcement-learning agents have been used within simulation frameworks like OpenAI Gym, DeepMind Lab, and MineDojo. Generative models have been used to power social agents that produce believable simulacra of human behaviour, as exemplified by Park et al. \cite{generativeagents}. Complementary work on open-ended embodied agents, such as Voyager, a GPT-4-powered agent that incrementally builds a skill library while autonomously exploring Minecraft \cite{voyager}, demonstrates lifelong learning in complex environments.
+
+    \subsection{Vision-Language-Action Policies}
+    Generalist vision-language-action policies like Octo map multimodal observations to diverse robot actions and tasks \cite{octo}. Our project extends these directions by introducing an explicit cognitive architecture that equips an embodied robot with hierarchical memory, anticipatory reasoning, and explainable decision-making.
+
+    \subsection{LLM-Driven Robot Control}
+    Recent research has also explored LLM-driven control of simulated or real robots capable of translating natural-language instructions into sensorimotor actions. Notable examples include:
+    \begin{itemize}
+        \item RT-2, a vision-language-action model that transfers web-scale knowledge to real-world robotic control \cite{rt2}
+        \item PaLM-E, an embodied multimodal language model that fuses a large-scale LLM with visual and state inputs \cite{palme}
+        \item Code-as-Policies, which prompts code-generating LLMs to produce executable robot control policies \cite{codeaspolicies}
+        \item Instruct2Act, a framework that converts multimodal instructions into perception-planning-action code, outperforming specialist policies on tabletop manipulation tasks \cite{instruct2act}
+    \end{itemize}
+
+\end{document}
