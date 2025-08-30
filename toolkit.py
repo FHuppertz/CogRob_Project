@@ -18,6 +18,10 @@ class RobotToolkit(BaseToolkit):
         self.robot = robot
         self.memory = memory
         self.scratchpad = []  # List to store scratchpad entries
+
+        # Flag to detect that the model has called the summarize_task tool
+        self.completion_requested = False
+
         super().__init__()
 
     def look_around(self, target: Union[str, List[float]]) -> dict:
@@ -82,8 +86,8 @@ class RobotToolkit(BaseToolkit):
         result = self.robot.place(location, place_position)
         return result
 
-    def summarize_task(self, status: str, description: str, summary: str) -> dict:
-        """Summarize the current task with a status report.
+    def end_task(self, status: str, description: str, summary: str) -> dict:
+        """End the current task with a status report.
 
         Args:
             status: Whether the task execution was a success, a failure, or unknown.
@@ -108,6 +112,8 @@ class RobotToolkit(BaseToolkit):
         # Store the task result in memory
         metadata = {"status": status, "summary": summary}
         self.memory.add_memory(description, metadata)
+
+        self.completion_requested = True
         
         return result
 
@@ -197,7 +203,7 @@ class RobotToolkit(BaseToolkit):
             FunctionTool(self.move_to),
             FunctionTool(self.grab),
             FunctionTool(self.place),
-            FunctionTool(self.summarize_task),
+            FunctionTool(self.end_task),
             FunctionTool(self.search_memory),
             FunctionTool(self.add_to_scratchpad),
             FunctionTool(self.view_scratchpad)
