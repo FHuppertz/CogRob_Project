@@ -28,11 +28,12 @@ The environment was designed as a simplified two-room household, comprising a ki
 
 To interact with the environment and its objects, the agent was equipped with several tool functions, each exposed through a tool-calling interface with text-based status responses. The implemented tools are summarized below:
 \begin{itemize}
-	\item \textbf{Perceive:} Returns the agent's location on a semantic map of the environment, as well as a list of objects detected in the current location.
+	\item \textbf{Look around:} Returns the agent's location on a semantic map of the environment, as well as a list of objects detected in proximity of the agent and where these objects are placed..
 	\item \textbf{Move To:} Executes navigation to a goal location on the semantic map. Path planning is performed using the A* algorithm; if a valid path is found, the agent follows it until the goal is reached. If no path is available, the tool reports failure.
 	\item \textbf{Grab:} Moves the robot arm toward a specified target object. If the end-effector reaches within a proximity threshold, the object is attached to the arm, and the tool reports success. Failure is reported if the target object does not exist, is out of reach, or if the agent is already holding an object.
 	\item \textbf{Place:} Allows the agent to release the currently held object at a specified location. Placement succeeds if the end-effector reaches the designated location, the location is unoccupied, and the agent is holding an object. Otherwise, the tool reports failure, specifying the violated condition.
 	\item \textbf{Scratch Pad:} The agent can write in lenght about anything it wants to reason about. This allows the agent to plan its actions beforehand.
+	\item \textbf{Summarize Task:} The agent provides a summary of an atempted task, including if it succeded or failed and what actions it did or attempt to complete the task.
 \end{itemize}
 
 \end{document}

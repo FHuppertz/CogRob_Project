@@ -2,8 +2,19 @@
 \documentclass[../report.tex]{subfiles}
 
 \begin{document}
-    \section{Evaluation}
-    \label{sec:evaluation}
+\section{Evaluation}
+\label{sec:evaluation}
 
-    If your work involved experiments, describe the experimental setup and the results in this section.
+\subsection{Task 1: Placing all items into the shelf}
+The first task the agent had to perform within the simulated environment consist of placing all items, here a mug, a box and a cube, into the three-layered shelf. The agent needs to sucessfully navigate to each of the items, grab them, then navigate to the shelf and place them in an unoccupied layer. \\
+
+\subsection{Task 2: Reordering the items in the shelf}
+The second task for the agent is to change the order of the items in the now fully occupied shelf. All items need to be placed on a different layer to the one they are currently placed on. To successfully complete this task, the agent needs to figure out that it can not place rearrange the items without storing one item in a location outside of the shelf, like the table it prevously grabbed the mug from. \\
+
+
+
+
+\subsection{Intaction Problems with the agent}
+During prompting the agent with a new task, after it has successfully completed a task, it can happen that the model refuses to attempt the new task. It states that it already has completed the new task, as it assumes the new task is the same as the old task. Sometimes clarifiying that the new task is indeed a new task works, but the agent can remain in this deadlock of refusing any new tasks.
+
 \end{document}
