@@ -56,16 +56,26 @@ class Robot:
         self._reset_path()
 
         # Agent
-        system_message = """You are a robot assistant. Your goal is to help the user with their tasks.
+        system_message = """You are a robot assistant. Your goal is to perform tasks given to you.
 
 You have the following tools available to you to assist with tasks:
+- look_around: Look around and return information about the environment. Use this tool when you need to get information about your current surroundings, including locations and objects.
 - move_to: Move the robot base to a target location by name (str). If you need to place or pick something, consider moving in front of the object in question before doing so, if such a location exists.
 - grab: Pick up an object by name (str). You must move to the location containing the object (or in front of the object) first before grabbing it or grabbing from it. Successfully grabbing an object makes the object the currently held object.
 - place: Place the held object at the given location by name (str). You must move to the location (or in front of the location) first before placing the object there. Note that you must have a currently held item that you can place. Successfully placing an object will remove it from being the currently held object.
-- finish_task: Finish the current task with a status report. Use this tool when you have completed the task or determined that it cannot be completed. Provide a status (success, failure, or unknown), a description of the original task including its status, and a detailed summary of the execution trace. Be sure to provide all information about the task execution, not missing details on any steps of the task execution.
+- end_task: End the current task with a status report. Use this tool when you have completed the task or determined that it cannot be completed. Provide a status (success, failure, or unknown), a description of the original task including its status, and a detailed summary of the execution trace. Be sure to provide all information about the task execution, not missing details on any steps of the task execution. Once the task is ended, you will receive a new task.
 - search_memory: Search your memory for previously completed tasks that might be relevant to the current task. Use this tool when you need information from past experiences to help with the current task. Always use this tool to check for previous experiences when starting a task.
+- add_to_scratchpad: Add an entry to your scratchpad for reasoning and reflection. Use this tool when you want to think through a problem and plan actions or record your thoughts before taking action. The scratchpad is private to you.
+- view_scratchpad: View the current contents of your scratchpad joined as paragraphs. Use this tool to review your previous thoughts and reasoning.
 
 If you come across issues or ambiguities, think in detail about what may have caused them, and take alternative approaches or measures to complete the task. Be agentic, and have a problem-solving approach to performing the task at hand. You should perform tasks with minimal additional supervision.
+
+Guidelines for optimal execution:
+- When given an unambiguous request, reason about reasonable ways to perform the task, and do not take things too literally.
+- Every time you need to perform a task, query your memory to see if you have done the task before, as well as to see how you mitigated issues that you may encounter in the task.
+- Use your scratchpad to make a plan, reason about your plan, as well as issues you may face in detail before making actions.
+- Ensure that you are in the correct location near an object before attempting to grab the object.
+- Ensure that you are in the correct location to place an object, before attempting to place the object.
 """
         if model:
             self.memory = Memory()
@@ -75,6 +85,7 @@ If you come across issues or ambiguities, think in detail about what may have ca
                 model=model,
                 tools=self.toolkit.get_tools(),
             )
+            self.first_turn = True
         else:
             self.toolkit = None
             self.chat_agent = None
@@ -93,11 +104,25 @@ If you come across issues or ambiguities, think in detail about what may have ca
         if stream:
             response = None
             previous_length = 0
+            consecutive_newlines = 0
             print("Generating streaming response...")
             for i, response in enumerate(self.chat_agent.step(message)):
                 if msgs := getattr(response, "msgs"):
                     current_content = msgs[0].content
-                    print(current_content[previous_length:], end="", flush=True)
+                    new_content = current_content[previous_length:]
+                    
+                    # Limit consecutive newlines to 2
+                    filtered_content = ""
+                    for char in new_content:
+                        if char == '\n':
+                            if consecutive_newlines < 2:
+                                filtered_content += char
+                                consecutive_newlines += 1
+                        else:
+                            filtered_content += char
+                            consecutive_newlines = 0
+                    
+                    print(filtered_content, end="", flush=True)
                     previous_length = len(current_content)
             print()
         else:
@@ -108,13 +133,32 @@ If you come across issues or ambiguities, think in detail about what may have ca
     def invoke(self, task_prompt: str):
         if self.chat_agent:
             prompt = self.create_environment_prompt() + "\n"
-            prompt += "You are given the following task, which may be a new task, or relate " + \
-                "to/be a continuation of a previous task in this session:\n" + \
-                f"<task>\n{task_prompt}\n</task>"
+            if self.first_turn:
+                prompt += "You are given the following task:\n"
+            else:
+                prompt += "You now have the following new task:\n"
+            prompt += f"<task>\n{task_prompt}\n</task>"
 
             print(f"Invoking agent with prompt:\n{prompt}")
             response = self._step(prompt)
-            print(f"Agent response:\n{response.msgs[0].content}")
+            if response is not None and hasattr(response, "msgs"):
+                print(f"Agent response:\n{response.msgs[0].content}")
+            
+            while self.toolkit is not None and not self.toolkit.completion_requested:
+                print(f"Invoking agent again as completion was not requested...")
+                prompt = self.create_environment_prompt() + "\n"
+                prompt += "You currently have the following task:\n" + \
+                    f"<task>\n{task_prompt}\n</task>\n" + \
+                    "Use the end_task tool to request completion of the task and to" + \
+                    "receive the next task."
+                
+                response = self._step(prompt)
+                if response is not None and hasattr(response, "msgs"):
+                    print(f"Agent response:\n{response.msgs[0].content}")
+
+            if self.toolkit:
+                self.toolkit.completion_requested = False
+
         else:
             print("No chat agent available, please provide a model")
 
@@ -342,8 +386,7 @@ If you come across issues or ambiguities, think in detail about what may have ca
         ee_pos, ee_ori = p.getLinkState(self.robot_id, ee_index)[4:6]
 
         dist = np.linalg.norm(np.array(target_pos) - np.array(ee_pos))
-        if dist < 0.5:
-
+        if dist < 0.75:
             if target_location is not None:
                 target_location.occupied_by = None
 
