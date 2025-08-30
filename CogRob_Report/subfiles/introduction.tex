@@ -25,7 +25,10 @@ While LLMs have shown remarkable performance in language-based reasoning and pla
 \subsection{Proposed Approach}
 \label{sec:introduction:proposed_approach}
 
-[Modified ChatGPT draft]
-To address this problem, a cognitive robotic agent was designed that embeds an LLM as its central reasoning engine and situates it in a PyBullet simulation of a household environment. The agent is embodied as a mobile manipulator with a 7-DoF arm mounted on an omnidirectional base, enabling navigation and object manipulation. A set of high-level tool functions were implemented to expose perception, navigation, grasping, and placement as callable actions for the LLM. Object placement and shelf reordering were chosen to test the agent’s ability to execute complex high level tasks, utilize episodic memory, and adapt to constraints such as occupied spaces. This work evaluates to wich extent LLMs can act as cognitive controllers for robots and identify their strengths and limitations in performing high level tasks.
+To address this problem, we propose a cognitive agent architecture that embeds an LLM as its central reasoning engine and situates it in a 3D PyBullet simulation of a household environment. Here, it is embodied as a mobile manipulator with a 7-DoF arm mounted on an omnidirectional base, enabling navigation and object manipulation.
+
+The agent receives observations from the environment primarily as natural language descriptions detailing the positions and types of objects and entities. Memory is organized into two main tiers: working memory in the form of a prompt for immediate task information and semantically searchable episodic logs for synthesized summaries of past actions. The LLM is prompted with chain-of-thought prompting to reason and form plans accounting for objects, entities, and anticipated outcomes.
+
+A set of high-level tool functions were implemented to expose perception, navigation, grasping, and placement as callable actions for the LLM. The environment features a kitchen and living room layout, in which the robot must carry out tasks like pick-and-place or sorting objects between designated areas. Object placement and shelf reordering were chosen to test the agent's ability to execute complex high level tasks, utilize its memory system, and adapt to constraints such as occupied spaces. This work evaluates the extent to which LLMs can act as cognitive controllers for robots and identifies their strengths and limitations in performing high level tasks.
 
 \end{document}
