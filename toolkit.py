@@ -20,6 +20,27 @@ class RobotToolkit(BaseToolkit):
         self.scratchpad = []  # List to store scratchpad entries
         super().__init__()
 
+    def look_around(self, target: Union[str, List[float]]) -> dict:
+        """Look around and return information about the environment. This method
+        creates an environment prompt that describes the current state of the
+        world, including locations and objects.
+
+        Args:
+            target: Either a string name of a location or [x, y] coordinates.
+
+        Returns:
+            dict: Result containing status and message with environment description.
+        """
+        content = self.robot.create_environment_prompt()
+        print(f"Robot looked around to find: \n{content}")
+
+        result = {
+            "status": "success",
+            "message": content
+        }
+
+        return result
+
     def move_to(self, target: Union[str, List[float]]) -> dict:
         """Move to a target location.
 
@@ -61,8 +82,8 @@ class RobotToolkit(BaseToolkit):
         result = self.robot.place(location, place_position)
         return result
 
-    def finish_task(self, status: str, description: str, summary: str) -> dict:
-        """Finish the current task with a status report.
+    def summarize_task(self, status: str, description: str, summary: str) -> dict:
+        """Summarize the current task with a status report.
 
         Args:
             status: Whether the task execution was a success, a failure, or unknown.
@@ -79,7 +100,10 @@ class RobotToolkit(BaseToolkit):
             "description": description,
             "summary": summary
         }
-        print(f"Agent has finished task with result:\n{result}")
+        print(f"Agent has finished task with result:\n")
+        print(f"status: {result['status']}")
+        print(f"description: {result['status']}")
+        print(f"summary: {result['summary']}")
         
         # Store the task result in memory
         metadata = {"status": status, "summary": summary}
@@ -109,8 +133,18 @@ class RobotToolkit(BaseToolkit):
                 "summary": memory["metadata"].get("summary", "")
             }
             formatted_results.append(formatted_result)
-        print("The query returned the following results:")
-        [print(formatted_result) for formatted_result in formatted_results]
+
+        if formatted_results:
+            print("The query returned the following results:")
+            for formatted_result in formatted_results:
+                print(f"status: {formatted_result['status']}")
+                print(f"description: {formatted_result['description']}")
+                print(f"summary: {formatted_result['summary']}")
+                print("---")
+            print("\n")
+        else:
+            print("The memory contained no matching results.")
+            formatted_results = "The memory contained no matching results."
         
         return {
             "status": "success",
@@ -118,16 +152,17 @@ class RobotToolkit(BaseToolkit):
             "results": formatted_results
         }
 
-    def add_to_scratchpad(self, entry: str) -> dict:
+    def add_to_scratchpad(self, content: str) -> dict:
         """Add an entry to the scratchpad for reasoning and reflection.
         
         Args:
-            entry (str): A string entry to add to the scratchpad
+            content (str): A string entry with content to add to the scratchpad
             
         Returns:
             dict: Confirmation of the addition with status
         """
-        self.scratchpad.append(entry)
+        self.scratchpad.append(content)
+        print(f"The agent wrote to the scratchpad: \n{content}\n")
         return {
             "status": "success",
             "message": f"Added entry to scratchpad. Current scratchpad has {len(self.scratchpad)} entries."
@@ -148,6 +183,7 @@ class RobotToolkit(BaseToolkit):
             
         # Join entries into paragraphs (separated by blank lines)
         content = "\n\n".join(self.scratchpad)
+        print(f"The agent viewed the scratchpad containing: \n{content}\n")
         return {
             "status": "success",
             "message": f"Scratchpad contains {len(self.scratchpad)} entries.",
@@ -157,10 +193,11 @@ class RobotToolkit(BaseToolkit):
     def get_tools(self) -> list[FunctionTool]:
         """Get list of available tools."""
         return [
+            FunctionTool(self.look_around),
             FunctionTool(self.move_to),
             FunctionTool(self.grab),
             FunctionTool(self.place),
-            FunctionTool(self.finish_task),
+            FunctionTool(self.summarize_task),
             FunctionTool(self.search_memory),
             FunctionTool(self.add_to_scratchpad),
             FunctionTool(self.view_scratchpad)
