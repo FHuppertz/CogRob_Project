@@ -4,14 +4,14 @@
 \begin{document}
 \section{Evaluation}
 \label{sec:evaluation}
-To evaluate the agents performance, multiple models have been tested on completing task within the environment. The evualted models are [INSERT MODELS HERE]. The task on which the agent was evaluated on are described in the following sections.
+To evaluate the agents performance, multiple models have been tested on completing tasks within the environment. The evualted models are [INSERT MODELS HERE]. The tasks on which the agent was evaluated on are described in the following sections.
 
 \subsection{Task 1: Placing all items into the shelf}
 The first task the agent had to perform within the simulated environment consist of placing all items, here a mug, a box and a cube, into the three-layered shelf. The agent needs to sucessfully navigate to each of the items, grab them, then navigate to the shelf and place them in an unoccupied layer. \\
 The agent perfomed this task successfully without running into larger failures. All models performed in a similar manner.
 
 \subsection{Task 2: Reordering the items in the shelf}
-The second task for the agent is to change the order of the items in the now fully occupied shelf. All items need to be placed on a different layer to the one they are currently placed on. To successfully complete this task, the agent needs to figure out that it can not place rearrange the items without storing one item in a location outside of the shelf. \\
+After completing the first task, the second task for the agent is to change the order of the items in the now fully occupied shelf. All items need to be placed on a different layer to the one they are currently placed on. To successfully complete this task, the agent needs to figure out that it can not place rearrange the items without storing one item in a location outside of the shelf. \\
 The success of the agent is not as certain as the prior task. Many times the agent gets stuck in trying to place items into occupied locations but it can find a plan involving a temporary storage location, for example the kitchen table, after a while. After successfully utilizing a temporary storage location the agent successfully completes the tasks. The biggest issue with the task does not lie in its execution but in getting the agent to attempt the task in the first place. This is described in more detail in the next section.
 
 \subsection{Intaction Problems with the agent}
