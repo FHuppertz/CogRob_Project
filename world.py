@@ -213,11 +213,11 @@ class World():
             Location("Kitchen Door", [3,2]),
             Location("Living Room Door", [3,-2]),
             Location("Living Room TV", [8.0, -4.5]),
-            Location("Living Room", [4.0, -3.0]),
+            Location("Living Room", [4.0, -4.0]),
 
             ## Kitchen
-            Location("Kitchen Area Left", [3,4]),
-            Location("Kitchen Shelf", [1,4.85], {
+            Location("Kitchen Area Left", [3, 4]),
+            Location("Kitchen Shelf", [1, 4.85], {
                 "top": [1,6,4.5*Shelf_scale+0.1],
                 "middle": [1,6,3.0*Shelf_scale+0.1],
                 "bottom": [1,6,1.5*Shelf_scale+0.1]

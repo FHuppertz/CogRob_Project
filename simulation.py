@@ -97,16 +97,26 @@ if __name__ == "__main__":
     sim.world.create_default_physical_objects()
 
     # Add a subscriber (e.g., a robot)
-    if os.environ.get("OPENAI_API_KEY", None) or os.getenv("ANTHROPIC_API_KEY"):
+    if os.environ.get("OPENAI_API_KEY", None) or os.getenv("ANTHROPIC_API_KEY") or os.getenv("VLLM_API_KEY"):
         # model = ModelFactory.create(
         #   model_platform=ModelPlatformType.OPENAI,
         #   model_type="gpt-4.1",
         #   model_config_dict={"temperature": 0.5},
         # )
+        # model = ModelFactory.create(
+        #     model_platform=ModelPlatformType.ANTHROPIC,
+        #     model_type=ModelType.CLAUDE_3_5_SONNET,
+        #     api_key=os.getenv("ANTHROPIC_API_KEY"),
+        #     model_config_dict={
+        #         # "temperature": 0.5,
+        #         # "stream": True
+        #     }
+        # )
         model = ModelFactory.create(
-            model_platform=ModelPlatformType.ANTHROPIC,
-            model_type=ModelType.CLAUDE_3_5_SONNET,
-            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            model_platform=ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
+            model_type="local",
+            api_key=os.getenv("LOCAL_API_KEY"),
+            url=os.getenv("LOCAL_API_HOST"),
             model_config_dict={
                 # "temperature": 0.5,
                 "stream": True
@@ -122,7 +132,7 @@ if __name__ == "__main__":
     sim.step(200)
 
     # # Give the robot commands
-    robot.grab("box")
+    # robot.grab("box")
 
     # # Move to kitchen shelf using internal path planning
     # print("Moving to Kitchen Shelf")
@@ -165,24 +175,24 @@ if __name__ == "__main__":
         while True:
             # Get user input
             task_prompt = input("Enter a task for the robot (or 'quit' to exit): ")
-            
+
             # Check if user wants to quit
             if task_prompt.lower() in ['quit', 'exit', 'q']:
                 print("Exiting simulation...")
                 break
-            
+
             # Skip empty prompts
             if not task_prompt.strip():
                 continue
-            
+
             # Invoke the robot's agent with the user's task
             robot.invoke(task_prompt)
-            
+
             # Delay at end
             sim.step(100)
-            
+
     except KeyboardInterrupt:
         print("\nSimulation interrupted by user.")
-    
+
     # Disconnect from PyBullet
     sim.disconnect()
