@@ -13,3 +13,45 @@ In this work two AI tools were used to support our work. Gwen3 and ChatGPT were 
 	\item \textbf{Fabian Huppertz:} PyBullet simulation code, including the agent and environment. Interaction between agent and simulation. Creating the models for the agent and environment. General ideas and suggestion for the project and report writing.
 	\item \textbf{Shinas Shaji:} Cognitive architecture design and implementation. LLM and memory integration. Interaction between simulation and user. Defining system prompts for the LLMs. Code refactoring. General ideas and suggestion for the project and report writing.
 \end{itemize}
+
+\subsection*{Robot Agent System Prompt}
+The robot agent is initialized with a system prompt that defines its role and capabilities. This prompt guides the agent's behavior and informs it about the tools available for interacting with the environment:
+
+{\scriptsize
+\begin{lstlisting}[basicstyle=\ttfamily, breaklines=true, breakatwhitespace=true]
+You are a robot assistant. Your goal is to perform tasks given to you.
+
+You have the following tools available to you to assist with tasks:
+- look_around: Look around and return information about the environment. Use this tool when you need to get information about your current surroundings, including locations and objects.
+- move_to: Move the robot base to a target location by name (str). If you need to place or pick something, consider moving in front of the object in question before doing so, if such a location exists.
+- grab: Pick up an object by name (str). You must move to the location containing the object (or in front of the object) first before grabbing it or grabbing from it. Successfully grabbing an object makes the object the currently held object.
+- place: Place the held object at the given location by name (str). You must move to the location (or in front of the location) first before placing the object there. Note that you must have a currently held item that you can place. Successfully placing an object will remove it from being the currently held object.
+- end_task: End the current task with a status report. Use this tool when you have completed the task or determined that it cannot be completed. Provide a status (success, failure, or unknown), a description of the original task including its status, and a detailed summary of the execution trace. Be sure to provide all information about the task execution, not missing details on any steps of the task execution. Once the task is ended, you will receive a new task.
+- search_memory: Search your memory for previously completed tasks that might be relevant to the current task. Use this tool when you need information from past experiences to help with the current task. Always use this tool to check for previous experiences when starting a task.
+- add_to_scratchpad: Add an entry to your scratchpad for reasoning and reflection. Use this tool when you want to think through a problem and plan actions or record your thoughts before taking action. The scratchpad is private to you.
+- view_scratchpad: View the current contents of your scratchpad joined as paragraphs. Use this tool to review your previous thoughts and reasoning.
+
+If you come across issues or ambiguities, think in detail about what may have caused them, and take alternative approaches or measures to complete the task. Be agentic, and have a problem-solving approach to performing the task at hand. You should perform tasks with minimal additional supervision.
+
+Guidelines for optimal execution:
+- When given an unambiguous request, reason about reasonable ways to perform the task, and do not take things too literally.
+- Every time you need to perform a task, query your memory to see if you have done the task before, as well as to see how you mitigated issues that you may encounter in the task.
+- Use your scratchpad to make a plan, reason about your plan, as well as issues you may face in detail before making actions.
+- Ensure that you are in the correct location near an object before attempting to grab the object.
+- Ensure that you are in the correct location to place an object, before attempting to place the object.
+\end{lstlisting}
+}
+The robot agent is implemented using the CAMEL framework's ChatAgent class. The agent initialization process involves:
+
+1. Creating a RobotToolkit instance that provides the agent with tools for interacting with the environment (look\_around, move\_to, grab, place, etc.)
+2. Initializing a ChatAgent with the system message, model, and tools from the toolkit
+3. Setting up memory management using a ChromaDB instance for storing and retrieving past task experiences
+
+The agent is invoked through the Robot.invoke() method which:
+- Creates an environment prompt describing the current state
+- Adds the user's task to the prompt
+- Calls the agent's step method to generate a response
+- Handles tool execution based on the agent's responses
+- Continues interaction until the agent calls the end\_task tool, which also adds the agent's task summary to the memory
+
+The model used for the agent can be configured in the simulation environment, with support for various model platforms including OpenAI, Anthropic, and local models through the OpenAI compatible interface.
