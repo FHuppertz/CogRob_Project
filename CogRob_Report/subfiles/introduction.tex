@@ -12,15 +12,18 @@ Large Language Models (LLMs) have been shown to exhibit impressive abilities in 
 
 To fully explore the cognitive capabilities of large language models, it is essential to situate them in environments that demand embodied, goal-directed interaction. This project investigates how LLMs function as the core of a cognitive architecture within a simulated 3D robotic setting, where the agent must physically manipulate objects and execute tasks in the real world.
 
-Unlike static text-based benchmarks, a robotic context enables examination of embodied reasoning, memory-guided action, and the capacity for grounded, anticipatory planning. By focusing on a single agent operating in a realistic environment -- such as a kitchen -- we can probe how LLMs reason about spatial layouts, interpret user instructions, and adapt plans based on feedback.
+Unlike static text-based benchmarks, a robotic context enables examination of embodied reasoning, memory-guided action, and the capacity for grounded, anticipatory planning. By focusing on a single agent operating in a realistic environment (such as a kitchen) we can probe how LLMs reason about spatial layouts, interpret user instructions, and adapt plans based on feedback.
 
 Importantly, the robot's (and by extension, the LLM agent's) planning and decision-making capabilities take on a more grounded role, reasoning in natural language about the physical consequences of movements and manipulative actions. This opens new directions for exploring embodied cognition and could inform future developments in cognitive robotics, assistive AI, and multi-modal agent systems.
 
 \subsection{Problem Statement}
 \label{sec:introduction:problem_statement}
 
-[ChatGPT draft]
-While LLMs have shown remarkable performance in language-based reasoning and planning, their ability to operate as the cognitive core of embodied agents in interactive environments is not well understood. The central problem addressed in this project is how to enable an LLM-driven agent to perceive, plan, and act within a simulated household setting, where it must manipulate objects, navigate between rooms, and complete multi-step tasks. This requires bridging the gap between high-level natural language reasoning and low-level embodied interaction, while coping with the inherent challenges of memory, grounding, and decision consistency.
+The central problem addressed in this project is how to effectively utilize large language models as cognitive controllers for embodied agents in realistic 3D environments. Specifically, we investigate how an LLM-driven agent can successfully perform complex household tasks that require physical interaction through navigation and object manipulation.
+
+Key challenges arise in bridging high-level natural language reasoning with low-level embodied actions. The agent must interpret abstract task descriptions and translate them into sequences of precise robotic actions such as navigation, grasping, and placement. This translation process is complicated by the inherent ambiguity in natural language instructions, leading to misinterpretations where agents may attempt to manipulate inappropriate objects.
+
+Additionally, we explore how episodic memory can enhance task performance through experience accumulation. The agent's ability to learn from previous failures and successes is critical for adapting strategies in complex tasks.
 
 \subsection{Proposed Approach}
 \label{sec:introduction:proposed_approach}
