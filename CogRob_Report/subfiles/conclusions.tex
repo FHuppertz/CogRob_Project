@@ -4,25 +4,28 @@
 \begin{document}
 \section{Conclusions}
 \label{sec:conclusions}
-[DRAFT]
-This project demonstrated how large language models can function as the cognitive core of an embodied agent within a simulated household environment. By embedding an LLM in a cognitive architecture that integrates memory and tool-use, the agent was able to perform tasks involving navigation, object manipulation, and environment interaction. The evaluation showed that while the agent could complete structured tasks and even adapt its strategy when supported by episodic memory, challenges remain in achieving consistent multi-step planning and avoiding task refusals. These findings suggest that LLMs hold promise as decision-making components in robotic systems, particularly when paired with supporting architectures, but also highlight the need for more robust mechanisms to improve reliability, scalability, and transfer to real-world platforms.
+This project demonstrated how a large language model can serve as the cognitive core of an embodied agent in a simulated household environment. By embedding an LLM within a cognitive architecture that combines working memory, episodic memory, and a tool-calling interface, we enabled a mobile manipulator to perceive, plan, and act in a physically grounded setting. 
 
-\subsection{Summary}
-\label{sec:conclusions:summary}
-[DRAFT]
-This project demonstrated how a large language model can serve as the cognitive core of an embodied agent in a simulated household environment. By embedding an LLM within a cognitive architecture that combines working memory, episodic memory, and a tool-calling interface, we enabled a mobile manipulator to perceive, plan, and act in a physically grounded setting. The agent successfully executed object manipulation and navigation tasks, such as placing items in a shelf and reordering them across locations. The results highlight that LLMs are capable of reasoning about spatial layouts, sequencing tool calls, and adapting strategies when faced with environmental constraints, though limitations such as task refusal and difficulty with multi-step planning remain.
+The agent successfully executed object manipulation and navigation tasks, such as placing items in a shelf and reordering them across locations. The implementation of episodic memory proved particularly valuable, as agents showed significant improvement in task completion when they could draw upon past experiences.
+
+The results highlight that LLMs are capable of reasoning about spatial layouts, sequencing tool calls, and adapting strategies when faced with environmental constraints. However, limitations such as poor instruction following, difficulty with multi-step planning, and occasional misinterpretation of ambiguous instructions remain significant challenges that must be addressed for robust real-world deployment.
 
 \subsection{Contributions}
 \label{sec:conclusions:contributions}
 The main contributions of this work are:
 \begin{itemize}
-	\item Implementation of a PyBullet-based simulation of a mobile manipulator equipped with navigation and manipulation capabilities.
-	\item Integration of an LLM into a simple cognitive architecture with memory and tool interfaces, allowing the agent to interact with its environment through perception, movement, and object manipulation.
-	\item Empirical evaluation of two household tasks, which provided insights into the strengths and limitations of current LLMs when applied to embodied decision-making.
+	\item Implementation of a PyBullet-based simulation of a mobile manipulator equipped with navigation and manipulation capabilities
+	\item Integration of an LLM into a cognitive architecture with memory and tool interfaces, allowing the agent to interact with its environment through perception, movement, and object manipulation
+	\item Empirical evaluation of two household tasks, which provided qualitative insights into the strengths and limitations of current LLMs when applied to embodied decision-making
 \end{itemize}
 
 \subsection{Future Work}
 \label{sec:conclusions:future_work}
-[DRAFT]
-While the current system demonstrates the feasibility of LLM-driven embodied agents, several challenges remain. Future work will focus on improving task generalization and robustness by refining memory integration and reducing hallucinations in task recognition. Automated evaluation pipelines could be implemented to generate quantitative performance benchmarks across tasks and models. Additionally, extending the simulation toward richer environments and incorporating more realistic grippers and perception pipelines would enable a closer approximation of real-world deployment. Finally, bridging the gap to physical robots remains a crucial next step for validating the scalability of this approach beyond simulation.
+While the current system demonstrates the feasibility of LLM-driven embodied agents, several challenges remain that must be addressed to achieve robust real-world deployment. Future work could focus on improving task generalization and robustness by refining integration of the memory and planning subsystems, as well as environment manipulation and action systems. In terms of future work for generative models, improvements could be made in areas such as reducing hallucinations as well as improving tool-calling capabilities and long-horizon model coherence.
+
+Automated evaluation pipelines could be implemented to generate quantitative performance benchmarks across a wider variety of tasks and models, enabling systematic comparison of different architectural approaches and LLM capabilities. These pipelines would measure metrics such as task completion rate, number of tool calls required, and time to completion.
+
+Additionally, extending the simulation toward richer environments with more complex objects, dynamic obstacles, and multi-agent interactions would enable a closer approximation of real-world deployment scenarios.
+
+Finally, bridging the gap to physical robots remains a crucial next step for validating the scalability of this approach beyond simulation. Real-world deployment would introduce new challenges such as sensor noise, mechanical wear, and latency constraints that must be addressed to maintain system reliability.
 \end{document}
