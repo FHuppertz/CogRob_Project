@@ -31,14 +31,14 @@ class TimeStepController:
             time.sleep(self.dt)
 
 class SimulationEnvironment:
-    def __init__(self, world: 'World'):
+    def __init__(self, world: 'World', time_step=0.01, real_time=True, headless=False):
         # Initialize PyBullet
-        self.physics_client = p.connect(p.GUI)
+        self.physics_client = p.connect(p.GUI if not headless else p.DIRECT)
         p.setGravity(0, 0, -9.8)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
         # Initialize timing and simulation components
-        self.time_controller = TimeStepController()
+        self.time_controller = TimeStepController(dt=time_step, real_time=real_time)
         self.subscribers = []
 
         # Place the camera above the origin, looking straight down
