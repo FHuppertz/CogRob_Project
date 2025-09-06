@@ -1,0 +1,28 @@
+num_iterations: 5
+prompts: 
+  - "Put away all the items into the shelf."
+  - "Swap the mug and the cube in the shelf."
+conditions: 
+  - type: "location"
+    task_index: 0
+    value: 
+      shelf:
+        - top
+        - middle
+        - bottom
+    condition: "occupied_by"
+    target:
+      - "mug"
+      - "cube"
+      - "box"
+  - type: "location"
+    task_index: 1
+    value: 
+      shelf:
+        - top
+        - middle
+        - bottom
+    condition: "swap"
+    target:
+      - "mug"
+      - "cube"
