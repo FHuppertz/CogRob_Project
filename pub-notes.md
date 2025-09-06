@@ -13,3 +13,16 @@ Do we need to monitor this manually? Automated tests?
 Declare the modifications and changes made to Qwen if we do end up using Qwen for the evaluation
 
 ICRA
+
+-----------------
+during tests, check number of tool calls and success (model belief and actual truth) as metrics
+
+potential tasks:
+    put stuff in shelf
+    swap items
+    leave room
+    reorder in shelf
+
+world:
+    standard world
+    randomized world (wish)
