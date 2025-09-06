@@ -1,4 +1,5 @@
 from typing import List, Optional, TYPE_CHECKING, Union
+from functools import wraps
 from camel.toolkits import FunctionTool, BaseToolkit
 
 if TYPE_CHECKING:
@@ -18,12 +19,24 @@ class RobotToolkit(BaseToolkit):
         self.robot = robot
         self.memory = memory
         self.scratchpad = []  # List to store scratchpad entries
+        
+        # Track the number of tool calls that occured
+        self.num_toolcalls = 0 
 
         # Flag to detect that the model has called the summarize_task tool
         self.completion_requested = False
 
         super().__init__()
 
+    def tool_call_counter(func):
+        """Decorator to increment num_toolcalls counter."""
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            self.num_toolcalls += 1
+            return func(self, *args, **kwargs)
+        return wrapper
+
+    @tool_call_counter
     def look_around(self, target: Union[str, List[float]]) -> dict:
         """Look around and return information about the environment. This method
         creates an environment prompt that describes the current state of the
@@ -45,6 +58,7 @@ class RobotToolkit(BaseToolkit):
 
         return result
 
+    @tool_call_counter
     def move_to(self, target: Union[str, List[float]]) -> dict:
         """Move to a target location.
 
@@ -57,6 +71,7 @@ class RobotToolkit(BaseToolkit):
         result = self.robot.move_to(target)
         return result
 
+    @tool_call_counter
     def grab(self, target: Union[str, int]) -> dict:
         """Grab an object by name or ID. You must move to the location containing
         the object first before grabbing it. Grabbing an object makes the object
@@ -71,6 +86,7 @@ class RobotToolkit(BaseToolkit):
         result = self.robot.grab(target)
         return result
 
+    @tool_call_counter
     def place(self, location: str, place_position: Optional[str]) -> dict:
         """Place the currently held object at a target location. You must move to
         the location first before placing the object there, and must also have an
@@ -86,6 +102,7 @@ class RobotToolkit(BaseToolkit):
         result = self.robot.place(location, place_position)
         return result
 
+    @tool_call_counter
     def end_task(self, status: str, description: str, summary: str) -> dict:
         """End the current task with a status report.
 
@@ -117,6 +134,7 @@ class RobotToolkit(BaseToolkit):
         
         return result
 
+    @tool_call_counter
     def search_memory(self, query: str) -> dict:
         """Search the robot's memory for relevant past tasks.
 
@@ -158,6 +176,7 @@ class RobotToolkit(BaseToolkit):
             "results": formatted_results
         }
 
+    @tool_call_counter
     def add_to_scratchpad(self, content: str) -> dict:
         """Add an entry to the scratchpad for reasoning and reflection.
         
@@ -174,6 +193,7 @@ class RobotToolkit(BaseToolkit):
             "message": f"Added entry to scratchpad. Current scratchpad has {len(self.scratchpad)} entries."
         }
 
+    @tool_call_counter
     def view_scratchpad(self) -> dict:
         """View the current scratchpad contents joined as paragraphs.
         
