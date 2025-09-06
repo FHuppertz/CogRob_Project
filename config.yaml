@@ -1,4 +1,8 @@
 num_iterations: 5
+models:
+  - "gpt-4.1"
+  - "claude-3.5-sonnet"
+  - "qwen3-coder-480b-a35b-instruct"
 prompts: 
   - "Put away all the items into the shelf."
   - "Swap the mug and the cube in the shelf."
@@ -7,11 +11,12 @@ conditions:
     value:
       location:
         shelf:
-          - top
-          - middle
-          - bottom
+          place_positions:
+            - top
+            - middle
+            - bottom
     condition: "occupied_by"
-    target:
+    targets:
       - "mug"
       - "cube"
       - "box"
@@ -19,10 +24,11 @@ conditions:
     value: 
       location:
         shelf:
-          - top
-          - middle
-          - bottom
+          place_positions:
+            - top
+            - middle
+            - bottom
     condition: "swap"
-    target:
+    targets:
       - "mug"
       - "cube"
