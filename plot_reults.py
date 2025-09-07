@@ -1,18 +1,38 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-task_results = pd.read_csv("results.csv").groupby("Task")
+# Load CSV and group by Model
+df = pd.read_csv("results.csv")
+model_groups = df.groupby("Model")
 
-# Plot the beleif vs truth for each Task and every experiment in the tasks
-for i in range(len(task_results.groups)):
-    task_group = task_results.get_group(i+1)
-    task_group[["Experiment","belief", "truth"]].plot(x="Experiment", kind="line", linestyle="dotted", marker="o", title=f"Belief values for Task {i+1}")
+# Iterate over each model
+for model_name, model_group in model_groups:
+    print(f"Processing model: {model_name}")
 
+    # Group by Task within this model
+    task_groups = model_group.groupby("Task")
 
-# Plotting the mean of all toolcalls for each task
-mean_toolcalls = task_results.mean(numeric_only=True)
-mean_toolcalls.plot(y="Toolcalls", kind="bar", title="Mean Toolcalls of Evaluation")
-plt.legend(["Toolcalls"])
+    # Plot Belief vs Truth for each Task
+    for task_number, task_group in task_groups:
+        task_group.plot(
+            x="Experiment",
+            y=["Belief", "Truth"],
+            kind="line",
+            linestyle="dotted",
+            marker="o",
+            title=f"Belief vs Truth for Model {model_name}, Task {task_number}"
+        )
+        plt.xlabel("Experiment")
+        plt.ylabel("Values")
+        plt.show()
 
-
-plt.show()
+    # Plot mean Toolcalls per Task for this model
+    mean_toolcalls = model_group.groupby("Task")["Toolcalls"].mean()
+    mean_toolcalls.plot(
+        kind="bar",
+        title=f"Average Toolcalls per Task for Model {model_name}",
+        legend=False
+    )
+    plt.xlabel("Task")
+    plt.ylabel("Average number of Toolcalls")
+    plt.show()
