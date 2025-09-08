@@ -1,13 +1,19 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
+
+# Make sure "plots" directory exists
+os.makedirs("plots", exist_ok=True)
 
 # Load CSV
 df = pd.read_csv("results.csv")
 
-# Bar plot: mean Accuracy across models & tasks
-mean_accuracy = df.groupby(["Model", "Task"])["Accuracy"].mean().unstack()*100
+# ============================
+# Bar plot: mean Accuracy
+# ============================
+mean_accuracy = df.groupby(["Model", "Task"])["Accuracy"].mean().unstack() * 100.0
 
-mean_accuracy.plot(
+ax = mean_accuracy.plot(
     kind="bar",
     figsize=(8, 6),
     title="Mean Accuracy across Models and Tasks"
@@ -15,11 +21,25 @@ mean_accuracy.plot(
 plt.xlabel("Model")
 plt.ylabel("Mean Accuracy [%]")
 plt.legend(title="Task")
-plt.ylim(0,100)
-plt.grid()
-plt.show()
 
-# Per-model plots for Toolcalls and Belief
+# Set custom ticks explicitly
+yticks = [i for i in range(0, 101, 10)]  # ticks every 10%
+plt.yticks(yticks)
+
+plt.ylim(0.0, 100.0)
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+
+# Add labels on top of bars
+for container in ax.containers:
+    ax.bar_label(container, fmt="%.1f", padding=3)  # one decimal, small gap
+
+# Save as PNG inside "plots" folder
+plt.savefig("plots/mean_accuracy.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+# ============================
+# Per-model plots
+# ============================
 model_groups = df.groupby("Model")
 for model_name, model_group in model_groups:
     print(f"Processing model: {model_name}")
@@ -30,16 +50,7 @@ for model_name, model_group in model_groups:
     plt.suptitle("")
     plt.xlabel("Task")
     plt.ylabel("Toolcalls")
-    plt.show()
 
-    # Line plot comparing Belief across Tasks for this model
-    pivot_belief = model_group.pivot(index="Trial", columns="Task", values="Belief")
-    pivot_belief.plot(
-        kind="line",
-        marker="o",
-        title=f"Belief across Tasks for Model {model_name}"
-    )
-    plt.xlabel("Trial")
-    plt.ylabel("Belief")
-    plt.grid()
-    plt.show()
+    # Save per-model boxplot as PNG inside "plots"
+    plt.savefig(f"plots/toolcalls_{model_name}.png", dpi=300, bbox_inches="tight")
+    plt.close()
