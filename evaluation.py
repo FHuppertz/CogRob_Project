@@ -211,7 +211,7 @@ for model_name in models_config:
                       f"Task={result_dict['Task']}, Trial={result_dict['Trial']}, "
                       f"Toolcalls={result_dict['Toolcalls']}, Belief={result_dict['Belief']}, "
                       f"Truth={result_dict['Truth']}, Accuracy={result_dict['Accuracy']}, "
-                      f"Stopped={result_dict['stopped']}"
+                      f"Stopped={result_dict['Stopped']}"
                       )
 
                 # Delay at end
