@@ -192,11 +192,16 @@ for model_name in models_config:
 
 # Save results to CSV file
 if results_data:
-    with open('results.csv', 'w', newline='') as csvfile:
+    file_exists = os.path.exists('results.csv')
+    
+    with open('results.csv', 'a', newline='') as csvfile:
         fieldnames = ['Model', 'Task', 'Trial', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
-        writer.writeheader()
+        # Only write header if file doesn't exist or is empty
+        if not file_exists or os.path.getsize('results.csv') == 0:
+            writer.writeheader()
+        
         for result in results_data:
             writer.writerow(result)
     
