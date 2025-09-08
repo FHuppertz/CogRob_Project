@@ -1,48 +1,45 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Load CSV and group by Model
+# Load CSV
 df = pd.read_csv("results.csv")
-model_groups = df.groupby("Model")
 
-# Iterate over each model
+# Bar plot: mean Accuracy across models & tasks
+mean_accuracy = df.groupby(["Model", "Task"])["Accuracy"].mean().unstack()*100
+
+mean_accuracy.plot(
+    kind="bar",
+    figsize=(8, 6),
+    title="Mean Accuracy across Models and Tasks"
+)
+plt.xlabel("Model")
+plt.ylabel("Mean Accuracy [%]")
+plt.legend(title="Task")
+plt.ylim(0,100)
+plt.grid()
+plt.show()
+
+# Per-model plots for Toolcalls and Belief
+model_groups = df.groupby("Model")
 for model_name, model_group in model_groups:
     print(f"Processing model: {model_name}")
 
-    # Group by Task within this model
-    task_groups = model_group.groupby("Task")
-
-    # Plot Belief vs Truth (line) for each Task
-    for task_number, task_group in task_groups:
-        task_group.plot(
-            x="Experiment",
-            y=["Belief", "Truth"],
-            kind="line",
-            linestyle="dotted",
-            marker="o",
-            title=f"Belief vs Truth for Model {model_name}, Task {task_number}"
-        )
-        plt.xlabel("Experiment")
-        plt.ylabel("Values")
-
-
-    # Create a boxplot of Toolcalls per Task
+    # Boxplot of Toolcalls per Task
     model_group.boxplot(column="Toolcalls", by="Task")
-
     plt.title(f"Toolcalls per Task for Model {model_name}")
-    plt.suptitle("")  # remove the automatic 'Boxplot grouped by Task' title
+    plt.suptitle("")
     plt.xlabel("Task")
     plt.ylabel("Toolcalls")
+    plt.show()
 
     # Line plot comparing Belief across Tasks for this model
-    pivot_belief = model_group.pivot(index="Experiment", columns="Task", values="Belief")
+    pivot_belief = model_group.pivot(index="Trial", columns="Task", values="Belief")
     pivot_belief.plot(
         kind="line",
         marker="o",
         title=f"Belief across Tasks for Model {model_name}"
     )
-    plt.xlabel("Experiment")
+    plt.xlabel("Trial")
     plt.ylabel("Belief")
-
-    # Show on screen
+    plt.grid()
     plt.show()
