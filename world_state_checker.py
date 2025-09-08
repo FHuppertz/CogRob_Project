@@ -97,6 +97,7 @@ class WorldStateChecker:
             # Check if the specified place positions are occupied by the target objects
             occupied_results = {}
             
+            num_success = 0
             for position_name in place_positions:
                 place_position = location_obj.get_place_position(position_name)
                 if not place_position:
@@ -112,6 +113,7 @@ class WorldStateChecker:
                         'status': 'success',
                         'message': f"Position '{position_name}' correctly occupied by '{occupied_by}'"
                     }
+                    num_success += 1
                 elif occupied_by is None:
                     occupied_results[position_name] = {
                         'status': 'failure',
@@ -124,6 +126,10 @@ class WorldStateChecker:
                     }
             
             results['occupied_by'] = occupied_results
+            if num_success == len(targets):
+                results['occupied_by']["status"] = "success"
+            else:
+                results['occupied_by']['status'] = "failure"
             
         elif condition_type == "swap":
             # For swap condition, check if targets have swapped positions compared to initial state
@@ -131,6 +137,7 @@ class WorldStateChecker:
             
             initial_state = self.initial_states.get(task_index, {})
             
+            num_success = 0
             for position_name in place_positions:
                 place_position = location_obj.get_place_position(position_name)
                 if not place_position:
@@ -151,6 +158,7 @@ class WorldStateChecker:
                         'status': 'success',
                         'message': f"Position '{position_name}' swapped from '{initial_occupied_by}' to '{current_occupied_by}'"
                     }
+                    num_success += 1
                 elif current_occupied_by == initial_occupied_by:
                     swap_results[position_name] = {
                         'status': 'info',
@@ -173,5 +181,9 @@ class WorldStateChecker:
                     }
             
             results['swap'] = swap_results
+            if num_success == len(targets):
+                results['swap']["status"] = "success"
+            else:
+                results['swap']['status'] = "failure"
         
         return results
