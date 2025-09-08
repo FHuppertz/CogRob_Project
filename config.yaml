@@ -1,4 +1,7 @@
-num_trials: 5
+time_step: 0.001
+real_time: False
+headless: True
+num_trials: 10
 num_memory_trials: 2
 models:
   - "qwen3-coder-480b-a35b-instruct"
