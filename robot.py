@@ -50,6 +50,10 @@ class Robot:
         self.action_target = None
         self.activity = set()
 
+        # Track invokes
+        self.num_invokes = 0
+        self.max_num_invokes = 10
+
         # Path planning and following
         self.path = []
         self.waypoint_index = 0
@@ -132,6 +136,8 @@ Guidelines for optimal execution:
 
     def invoke(self, task_prompt: str):
         if self.chat_agent:
+            self.num_invokes = 0
+
             prompt = self.create_environment_prompt() + "\n"
             if self.first_turn:
                 prompt += "You are given the following task:\n"
@@ -144,6 +150,7 @@ Guidelines for optimal execution:
             if response is not None and hasattr(response, "msgs"):
                 print(f"Agent response:\n{response.msgs[0].content}")
             
+            self.num_invokes += 1
             while self.toolkit is not None and not self.toolkit.completion_requested:
                 print(f"Invoking agent again as completion was not requested...")
                 prompt = self.create_environment_prompt() + "\n"
@@ -155,6 +162,14 @@ Guidelines for optimal execution:
                 response = self._step(prompt)
                 if response is not None and hasattr(response, "msgs"):
                     print(f"Agent response:\n{response.msgs[0].content}")
+
+                self.num_invokes += 1
+                if self.num_invokes >= self.max_num_invokes:
+                    self.toolkit.end_task(
+                        status="stopped",
+                        description="Stopped due to reaching maximum number of invokes",
+                        summary="Stopped due to reaching maximum number of invokes",
+                        )
 
             if self.toolkit:
                 self.toolkit.completion_requested = False

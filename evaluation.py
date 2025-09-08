@@ -112,7 +112,7 @@ if not prompts_config:
 
 # Initialize CSV file handling
 file_exists = os.path.exists('results.csv')
-fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
+fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Invokes', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
 
 for model_name in models_config:
     for iteration_index in range(num_trials):
@@ -160,6 +160,7 @@ for model_name in models_config:
                 if robot.toolkit:
                     robot.toolkit.num_toolcalls = 0
                     robot.toolkit.end_task_status = None
+                    robot.num_invokes = 0
 
                 # Invoke the robot's agent with the task prompt
                 robot.invoke(task_prompt)
@@ -172,6 +173,7 @@ for model_name in models_config:
                     'Memory': memory_trial_index,
                     'Task': task_index + 1,  # 1-based indexing for tasks
                     'Trial': iteration_index + 1,  # 1-based indexing for trials
+                    'Invokes': robot.num_invokes,
                     'Toolcalls': robot.toolkit.num_toolcalls if robot.toolkit else 0,
                     'Belief': 1 if (robot.toolkit.end_task_status == "success" if robot.toolkit else False) else 0,
                     'Truth': 1 if (results.get('status', 'error') == "success") else 0,

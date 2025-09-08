@@ -135,7 +135,9 @@ class RobotToolkit(BaseToolkit):
         
         # Store the task result in memory
         metadata = {"status": status, "summary": summary}
-        self.memory.add_memory(description, metadata)
+
+        if not status == "stopped":
+            self.memory.add_memory(description, metadata)
 
         self.completion_requested = True
         
