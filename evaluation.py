@@ -55,7 +55,7 @@ def load_model(model_name):
                 return ModelFactory.create(
                     model_platform=model_info["platform"],
                     model_type=model_info["type"],
-                    model_config_dict={"temperature": 0.5},
+                    # model_config_dict={"temperature": 0.5},
                 )
             else:
                 print("OPENAI_API_KEY not found in environment variables")
@@ -67,7 +67,7 @@ def load_model(model_name):
                     model_platform=model_info["platform"],
                     model_type=model_info["type"],
                     api_key=os.environ.get("ANTHROPIC_API_KEY"),
-                    model_config_dict={"temperature": 0.5},
+                    # model_config_dict={"temperature": 0.5},
                 )
             else:
                 print("ANTHROPIC_API_KEY not found in environment variables")
@@ -80,7 +80,10 @@ def load_model(model_name):
                     model_type=model_info["type"],
                     api_key=os.environ.get("LOCAL_API_KEY"),
                     url=os.environ.get("LOCAL_API_HOST"),
-                    model_config_dict={"stream": True}
+                    model_config_dict={
+                        "stream": True,
+                        "temperature": 0.7,
+                        }
                 )
             else:
                 print("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
@@ -204,6 +207,10 @@ for model_name in models_config:
 
                 # Delay at end
                 sim.step(100)
+
+                if not results.get('status', 'error') == "success":
+                    print(f"Stopping at task index {task_index} as robot was unsuccessful...")
+                    break
 
             # Disconnect from PyBullet
             sim.disconnect()
