@@ -21,13 +21,17 @@ class RobotToolkit(BaseToolkit):
         self.scratchpad = []  # List to store scratchpad entries
         
         # Track the number of tool calls that occured
-        self.num_toolcalls = 0 
+        self.num_toolcalls = 0
+
+        # Track the status of the result from end_task
+        self.end_task_status = None
 
         # Flag to detect that the model has called the summarize_task tool
         self.completion_requested = False
 
         super().__init__()
 
+    @staticmethod
     def tool_call_counter(func):
         """Decorator to increment num_toolcalls counter."""
         @wraps(func)
@@ -123,8 +127,11 @@ class RobotToolkit(BaseToolkit):
         }
         print(f"Agent has finished task with result:\n")
         print(f"status: {result['status']}")
-        print(f"description: {result['status']}")
+        print(f"description: {result['description']}")
         print(f"summary: {result['summary']}")
+        
+        # Store the task status for evaluation
+        self.end_task_status = status
         
         # Store the task result in memory
         metadata = {"status": status, "summary": summary}
