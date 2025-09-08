@@ -2,7 +2,6 @@ import dotenv
 dotenv.load_dotenv()
 
 import os
-import shutil
 import yaml
 import pybullet as p
 import csv
@@ -120,9 +119,6 @@ fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Invokes', 'Toolcalls', 'Belie
 
 for model_name in models_config:
     for iteration_index in range(num_trials):
-        # Delete memory before starting
-        shutil.rmtree("./data/chroma_db", ignore_errors=True)
-        
         for memory_trial_index in range(num_memory_trials):
             # Create a simulation environment
             world = World.create_default_world()
@@ -144,6 +140,8 @@ for model_name in models_config:
                 continue
 
             robot = Robot(sim, model)
+            if robot.chat_agent is not None:
+                robot.chat_agent.init_messages()    
             sim.add_subscriber(robot)
 
             # Run the simulation
@@ -214,5 +212,8 @@ for model_name in models_config:
 
             # Disconnect from PyBullet
             sim.disconnect()
+
+            # Delete memories from robot
+            robot.memory.delete_all_memories()
 
 print(f"\nResults saved incrementally to results.csv")
