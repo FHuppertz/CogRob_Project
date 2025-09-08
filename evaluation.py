@@ -97,6 +97,7 @@ print(f"Loaded config:")
 pprint(config)
 
 num_trials = config.get('num_trials', 1)
+num_memory_trials = config.get('num_memory_trials', 2)
 models_config = config.get('models', [])
 prompts_config = config.get('prompts', [])
 conditions_config = config.get('conditions', [])
@@ -114,88 +115,93 @@ results_data = []
 
 for model_name in models_config:
     for iteration_index in range(num_trials):
-        # Create a simulation environment
-        world = World.create_default_world()
-        sim = SimulationEnvironment(world, time_step=0.0, real_time=False, headless=True)
-        sim.world.create_default_physical_objects()
+        # Delete memory before starting
+        os.removedirs("./data/chroma_db")
         
-        # Initialize world state checker
-        state_checker = WorldStateChecker(world, conditions_config)
+        for memory_trial_index in range(num_memory_trials):
+            # Create a simulation environment
+            world = World.create_default_world()
+            sim = SimulationEnvironment(world, time_step=0.0, real_time=False, headless=True)
+            sim.world.create_default_physical_objects()
 
-        # Load model if specified
-        if model_name:
-            print(f"Loading model: {model_name}")
-            model = load_model(model_name)
+            # Initialize world state checker
+            state_checker = WorldStateChecker(world, conditions_config)
 
-            if model is None:
-                continue
-        else:
-            model = None
-            continue
+            # Load model if specified
+            if model_name:
+                print(f"Loading model: {model_name}")
+                model = load_model(model_name)
 
-        robot = Robot(sim, model)
-        sim.add_subscriber(robot)
-
-        # Run the simulation
-        sim.step(200)
-
-        # Loop through prompts from config
-        for task_index, task_prompt in enumerate(prompts_config):
-            print(f"Executing prompt {task_index + 1}/{len(prompts_config)}: {task_prompt}")
-            
-            # Record initial state before robot invocation
-            state_checker.record_initial_state(task_index)
-            
-            # Skip empty prompts
-            if not task_prompt.strip():
+                if model is None:
+                    continue
+            else:
+                model = None
                 continue
 
-            # Reset toolkit counters before each task
-            if robot.toolkit:
-                robot.toolkit.num_toolcalls = 0
-                robot.toolkit.end_task_status = None
+            robot = Robot(sim, model)
+            sim.add_subscriber(robot)
 
-            # Invoke the robot's agent with the task prompt
-            robot.invoke(task_prompt)
+            # Run the simulation
+            sim.step(200)
 
-            results = state_checker.check_final_state(task_index)
+            # Loop through prompts from config
+            for task_index, task_prompt in enumerate(prompts_config):
+                print(f"Executing prompt {task_index + 1}/{len(prompts_config)}: {task_prompt}")
 
-            # Extract data for CSV using dictionary
-            result_dict = {
-                'Model': model_name if model_name else "None",
-                'Task': task_index + 1,  # 1-based indexing for tasks
-                'Trial': iteration_index + 1,  # 1-based indexing for trials
-                'Toolcalls': robot.toolkit.num_toolcalls if robot.toolkit else 0,
-                'Belief': 1 if (robot.toolkit.end_task_status == "success" if robot.toolkit else False) else 0,
-                'Truth': 1 if (results.get('status', 'error') == "success") else 0,
-                'Accuracy': 0  # Will be calculated after getting belief and truth
-            }
-            
-            # Calculate accuracy (1 if belief matches truth, 0 otherwise)
-            result_dict['Accuracy'] = 1 if result_dict['Belief'] == result_dict['Truth'] else 0
-            
-            # Add to results collection
-            results_data.append(result_dict)
-            
-            print(f"State check results for task {task_index}:")
-            pprint(results)
-            print(f"Collected data: Model={result_dict['Model']}, Task={result_dict['Task']}, "
-                  f"Trial={result_dict['Trial']}, Toolcalls={result_dict['Toolcalls']}, "
-                  f"Belief={result_dict['Belief']}, Truth={result_dict['Truth']}, "
-                  f"Accuracy={result_dict['Accuracy']}")
+                # Record initial state before robot invocation
+                state_checker.record_initial_state(task_index)
 
-            # Delay at end
-            sim.step(100)
+                # Skip empty prompts
+                if not task_prompt.strip():
+                    continue
 
-        # Disconnect from PyBullet
-        sim.disconnect()
+                # Reset toolkit counters before each task
+                if robot.toolkit:
+                    robot.toolkit.num_toolcalls = 0
+                    robot.toolkit.end_task_status = None
+
+                # Invoke the robot's agent with the task prompt
+                robot.invoke(task_prompt)
+
+                results = state_checker.check_final_state(task_index)
+
+                # Extract data for CSV using dictionary
+                result_dict = {
+                    'Model': model_name if model_name else "None",
+                    'Memory': memory_trial_index,
+                    'Task': task_index + 1,  # 1-based indexing for tasks
+                    'Trial': iteration_index + 1,  # 1-based indexing for trials
+                    'Toolcalls': robot.toolkit.num_toolcalls if robot.toolkit else 0,
+                    'Belief': 1 if (robot.toolkit.end_task_status == "success" if robot.toolkit else False) else 0,
+                    'Truth': 1 if (results.get('status', 'error') == "success") else 0,
+                    'Accuracy': 0  # Will be calculated after getting belief and truth
+                }
+
+                # Calculate accuracy (1 if belief matches truth, 0 otherwise)
+                result_dict['Accuracy'] = 1 if result_dict['Belief'] == result_dict['Truth'] else 0
+
+                # Add to results collection
+                results_data.append(result_dict)
+
+                print(f"State check results for task {task_index}:")
+                pprint(results)
+                print(f"Collected data: Model={result_dict['Model']}, Memory={result_dict['Memory']}, "
+                      f"Task={result_dict['Task']}, Trial={result_dict['Trial']}, "
+                      f"Toolcalls={result_dict['Toolcalls']}, Belief={result_dict['Belief']}, "
+                      f"Truth={result_dict['Truth']}, Accuracy={result_dict['Accuracy']}")
+
+                # Delay at end
+                sim.step(100)
+
+            # Disconnect from PyBullet
+            sim.disconnect()
 
 # Save results to CSV file
 if results_data:
     file_exists = os.path.exists('results.csv')
     
     with open('results.csv', 'a', newline='') as csvfile:
-        fieldnames = ['Model', 'Task', 'Trial', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
+        fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         # Only write header if file doesn't exist or is empty

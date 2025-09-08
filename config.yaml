@@ -1,4 +1,5 @@
 num_trials: 5
+num_memory_trials: 2
 models:
   - "qwen3-coder-480b-a35b-instruct"
   - "gpt-4.1"
