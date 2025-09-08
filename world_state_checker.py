@@ -72,6 +72,7 @@ class WorldStateChecker:
                 break
         
         if not task_condition:
+            results['status'] = "error"
             results['error'] = f"No condition found for task index {task_index}"
             return results
         
@@ -80,6 +81,7 @@ class WorldStateChecker:
         location_info = task_condition.get('value', {}).get('location', {})
         
         if not location_info:
+            results['status'] = "error"
             results['error'] = "No location information found in condition"
             return results
         
@@ -90,6 +92,7 @@ class WorldStateChecker:
         # Get the location object from the world
         location_obj = self.world.get_location(location_name)
         if not location_obj:
+            results['status'] = "error"
             results['error'] = f"Location '{location_name}' not found in world"
             return results
         
@@ -127,9 +130,9 @@ class WorldStateChecker:
             
             results['occupied_by'] = occupied_results
             if num_success == len(targets):
-                results['occupied_by']["status"] = "success"
+                results["status"] = "success"
             else:
-                results['occupied_by']['status'] = "failure"
+                results['status'] = "failure"
             
         elif condition_type == "swap":
             # For swap condition, check if targets have swapped positions compared to initial state
@@ -182,8 +185,8 @@ class WorldStateChecker:
             
             results['swap'] = swap_results
             if num_success == len(targets):
-                results['swap']["status"] = "success"
+                results["status"] = "success"
             else:
-                results['swap']['status'] = "failure"
+                results['status'] = "failure"
         
         return results

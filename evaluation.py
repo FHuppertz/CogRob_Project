@@ -4,6 +4,7 @@ dotenv.load_dotenv()
 import os
 import yaml
 import pybullet as p
+import csv
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -88,7 +89,6 @@ def load_model(model_name):
         print(f"Error loading model {model_name}: {e}")
         return None
 
-
 # Load configuration from YAML file
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -96,7 +96,7 @@ with open('config.yaml', 'r') as file:
 print(f"Loaded config:")
 pprint(config)
 
-num_iterations = config.get('num_iterations', 1)
+num_trials = config.get('num_trials', 1)
 models_config = config.get('models', [])
 prompts_config = config.get('prompts', [])
 conditions_config = config.get('conditions', [])
@@ -109,8 +109,11 @@ if not models_config:
 if not prompts_config:
     prompts_config = ["Put away all the items into the shelf."]
 
+# Results collection list
+results_data = []
+
 for model_name in models_config:
-    for iteration_index in range(num_iterations):
+    for iteration_index in range(num_trials):
         # Create a simulation environment
         world = World.create_default_world()
         sim = SimulationEnvironment(world, time_step=0.0, real_time=False, headless=True)
@@ -123,8 +126,12 @@ for model_name in models_config:
         if model_name:
             print(f"Loading model: {model_name}")
             model = load_model(model_name)
+
+            if model is None:
+                continue
         else:
             model = None
+            continue
 
         robot = Robot(sim, model)
         sim.add_subscriber(robot)
@@ -143,16 +150,56 @@ for model_name in models_config:
             if not task_prompt.strip():
                 continue
 
+            # Reset toolkit counters before each task
+            if robot.toolkit:
+                robot.toolkit.num_toolcalls = 0
+                robot.toolkit.end_task_status = None
+
             # Invoke the robot's agent with the task prompt
             robot.invoke(task_prompt)
 
-            # Check final state after robot invocation
             results = state_checker.check_final_state(task_index)
+
+            # Extract data for CSV using dictionary
+            result_dict = {
+                'Model': model_name if model_name else "None",
+                'Task': task_index + 1,  # 1-based indexing for tasks
+                'Trial': iteration_index + 1,  # 1-based indexing for trials
+                'Toolcalls': robot.toolkit.num_toolcalls if robot.toolkit else 0,
+                'Belief': 1 if (robot.toolkit.end_task_status == "success" if robot.toolkit else False) else 0,
+                'Truth': 1 if (results.get('status', 'error') == "success") else 0,
+                'Accuracy': 0  # Will be calculated after getting belief and truth
+            }
+            
+            # Calculate accuracy (1 if belief matches truth, 0 otherwise)
+            result_dict['Accuracy'] = 1 if result_dict['Belief'] == result_dict['Truth'] else 0
+            
+            # Add to results collection
+            results_data.append(result_dict)
+            
             print(f"State check results for task {task_index}:")
             pprint(results)
+            print(f"Collected data: Model={result_dict['Model']}, Task={result_dict['Task']}, "
+                  f"Trial={result_dict['Trial']}, Toolcalls={result_dict['Toolcalls']}, "
+                  f"Belief={result_dict['Belief']}, Truth={result_dict['Truth']}, "
+                  f"Accuracy={result_dict['Accuracy']}")
 
             # Delay at end
             sim.step(100)
 
         # Disconnect from PyBullet
         sim.disconnect()
+
+# Save results to CSV file
+if results_data:
+    with open('results.csv', 'w', newline='') as csvfile:
+        fieldnames = ['Model', 'Task', 'Trial', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        writer.writeheader()
+        for result in results_data:
+            writer.writerow(result)
+    
+    print(f"\nSaved {len(results_data)} results to results.csv")
+else:
+    print("\nNo results collected")
