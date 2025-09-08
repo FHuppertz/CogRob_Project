@@ -115,6 +115,24 @@ class Memory:
         except Exception:
             return False
     
+    def delete_all_memories(self) -> bool:
+        """
+        Delete all memories from the collection.
+        
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        try:
+            # Get all memory IDs first
+            all_memories = self.get_all_memories()
+            if all_memories:
+                # Extract all IDs and delete them
+                all_ids = [memory['id'] for memory in all_memories]
+                self.collection.delete(ids=all_ids)
+            return True
+        except Exception:
+            return False
+    
     def get_all_memories(self) -> List[Dict[str, Any]]:
         """
         Retrieve all memories in the collection.
