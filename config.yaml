@@ -1,8 +1,8 @@
-num_iterations: 5
+num_trials: 5
 models:
+  - "qwen3-coder-480b-a35b-instruct"
   - "gpt-4.1"
   - "claude-3.5-sonnet"
-  - "qwen3-coder-480b-a35b-instruct"
 prompts: 
   - "Put away all the items into the shelf."
   - "Swap the mug and the cube in the shelf."
