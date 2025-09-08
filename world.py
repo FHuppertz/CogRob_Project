@@ -18,9 +18,7 @@ class Location():
         self.center = np.array(center)
         self.place_positions = {}
 
-        # Default place position is slightly offset from center
-        if place_position is None:
-            self.add_place_positions({"top": [center[0], center[1], 0.5]})
+        # Add defined place positions, if any
         if isinstance(place_position, dict):
             self.add_place_positions(place_position)
         self.neighbours: List['Location']= []
@@ -208,15 +206,24 @@ class World():
 
         ## Hallway
         locations = [
-            Location("Hallway Area Door", [3,0]),
-            Location("Front Door", [0,0]),
+            Location("Hallway Area Door", [3,0],{
+                "floor": [4,0,0.2]
+            }),
+            Location("Front Door", [0,0], {
+                "floor": [-1,0,0.2]
+            }),
             Location("Kitchen Door", [3,2]),
             Location("Living Room Door", [3,-2]),
             Location("Living Room TV", [8.0, -4.5]),
-            Location("Living Room", [4.0, -4.0]),
+            Location("Living Room", [4.0, -4.0], {
+                "floor": [3,-4,0.2]
+            }),
 
             ## Kitchen
-            Location("Kitchen Area Left", [3, 4]),
+            Location("Kitchen Area Left", [3, 4], {
+                "floor": [3,5,0.2]
+            }
+            ),
             Location("Kitchen Shelf", [1, 4.85], {
                 "top": [1,6,4.5*Shelf_scale+0.1],
                 "middle": [1,6,3.0*Shelf_scale+0.1],
@@ -272,7 +279,7 @@ class World():
         cube_id = p.createMultiBody(baseMass=0.01,
                                    baseCollisionShapeIndex=cube_collision,
                                    baseVisualShapeIndex=cube_visual,
-                                   basePosition=[1.0, 0.0, 0.1])
+                                   basePosition=[-1.0, 0.0, 0.1])
 
         # Add cube to world objects
         self.add_object(cube_id, "cube")
@@ -284,7 +291,7 @@ class World():
         box_id = p.createMultiBody(baseMass=0.01,
                                    baseCollisionShapeIndex=box_collision,
                                    baseVisualShapeIndex=box_visual,
-                                   basePosition=[3.0, -2.5, 0.1])
+                                   basePosition=[3,-4,0.1])
 
         # Add box to world objects
         self.add_object(box_id, "box")
