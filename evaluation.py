@@ -2,6 +2,7 @@ import dotenv
 dotenv.load_dotenv()
 
 import os
+import shutil
 import yaml
 import pybullet as p
 import csv
@@ -117,7 +118,7 @@ fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Invokes', 'Toolcalls', 'Belie
 for model_name in models_config:
     for iteration_index in range(num_trials):
         # Delete memory before starting
-        os.removedirs("./data/chroma_db")
+        shutil.rmtree("./data/chroma_db", ignore_errors=True)
         
         for memory_trial_index in range(num_memory_trials):
             # Create a simulation environment
