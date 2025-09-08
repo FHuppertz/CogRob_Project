@@ -110,8 +110,9 @@ if not models_config:
 if not prompts_config:
     prompts_config = ["Put away all the items into the shelf."]
 
-# Results collection list
-results_data = []
+# Initialize CSV file handling
+file_exists = os.path.exists('results.csv')
+fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
 
 for model_name in models_config:
     for iteration_index in range(num_trials):
@@ -180,8 +181,16 @@ for model_name in models_config:
                 # Calculate accuracy (1 if belief matches truth, 0 otherwise)
                 result_dict['Accuracy'] = 1 if result_dict['Belief'] == result_dict['Truth'] else 0
 
-                # Add to results collection
-                results_data.append(result_dict)
+                # Save result to CSV immediately after each iteration
+                with open('results.csv', 'a', newline='') as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    
+                    # Only write header if file doesn't exist or is empty
+                    if not file_exists or os.path.getsize('results.csv') == 0:
+                        writer.writeheader()
+                        file_exists = True  # Update flag after writing header
+                    
+                    writer.writerow(result_dict)
 
                 print(f"State check results for task {task_index}:")
                 pprint(results)
@@ -196,21 +205,4 @@ for model_name in models_config:
             # Disconnect from PyBullet
             sim.disconnect()
 
-# Save results to CSV file
-if results_data:
-    file_exists = os.path.exists('results.csv')
-    
-    with open('results.csv', 'a', newline='') as csvfile:
-        fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-        # Only write header if file doesn't exist or is empty
-        if not file_exists or os.path.getsize('results.csv') == 0:
-            writer.writeheader()
-        
-        for result in results_data:
-            writer.writerow(result)
-    
-    print(f"\nSaved {len(results_data)} results to results.csv")
-else:
-    print("\nNo results collected")
+print(f"\nResults saved incrementally to results.csv")
