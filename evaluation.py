@@ -118,7 +118,7 @@ if not prompts_config:
 
 # Initialize CSV file handling
 file_exists = os.path.exists('results.csv')
-fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Invokes', 'Toolcalls', 'Belief', 'Truth', 'Accuracy']
+fieldnames = ['Model', 'Memory', 'Task', 'Trial', 'Invokes', 'Toolcalls', 'Belief', 'Truth', 'Accuracy', 'Stopped']
 
 for model_name in models_config:
     for iteration_index in range(num_trials):
@@ -187,7 +187,8 @@ for model_name in models_config:
                     'Toolcalls': robot.toolkit.num_toolcalls if robot.toolkit else 0,
                     'Belief': 1 if (robot.toolkit.end_task_status == "success" if robot.toolkit else False) else 0,
                     'Truth': 1 if (results.get('status', 'error') == "success") else 0,
-                    'Accuracy': 0  # Will be calculated after getting belief and truth
+                    'Accuracy': 0,  # Will be calculated after getting belief and truth
+                    'Stopped': 1 if robot.stopped else 0,
                 }
 
                 # Calculate accuracy (1 if belief matches truth, 0 otherwise)
@@ -209,7 +210,9 @@ for model_name in models_config:
                 print(f"Collected data: Model={result_dict['Model']}, Memory={result_dict['Memory']}, "
                       f"Task={result_dict['Task']}, Trial={result_dict['Trial']}, "
                       f"Toolcalls={result_dict['Toolcalls']}, Belief={result_dict['Belief']}, "
-                      f"Truth={result_dict['Truth']}, Accuracy={result_dict['Accuracy']}")
+                      f"Truth={result_dict['Truth']}, Accuracy={result_dict['Accuracy']}, "
+                      f"Stopped={result_dict['stopped']}"
+                      )
 
                 # Delay at end
                 sim.step(100)

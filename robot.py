@@ -53,6 +53,7 @@ class Robot:
         # Track invokes
         self.num_invokes = 0
         self.max_num_invokes = 10
+        self.stopped = False
 
         # Path planning and following
         self.path = []
@@ -137,6 +138,7 @@ Guidelines for optimal execution:
     def invoke(self, task_prompt: str):
         if self.chat_agent:
             self.num_invokes = 0
+            self.stopped = False
 
             prompt = self.create_environment_prompt() + "\n"
             if self.first_turn:
@@ -170,6 +172,7 @@ Guidelines for optimal execution:
                         description="Stopped due to reaching maximum number of invokes",
                         summary="Stopped due to reaching maximum number of invokes",
                         )
+                    self.stopped = True
 
             if self.toolkit:
                 self.toolkit.completion_requested = False
@@ -245,7 +248,7 @@ Guidelines for optimal execution:
         self.activity.add("move")
 
         # Run simulation until we reach the target or timeout
-        for _ in range(1000):
+        for _ in range(2000):
             if not "move" in self.activity:
                 return {
                     'status': 'success',
