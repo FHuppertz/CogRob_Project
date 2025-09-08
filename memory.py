@@ -129,6 +129,8 @@ class Memory:
                 # Extract all IDs and delete them
                 all_ids = [memory['id'] for memory in all_memories]
                 self.collection.delete(ids=all_ids)
+
+                print(f"Deleted {len(all_ids)} (all) memories")
             return True
         except Exception:
             return False

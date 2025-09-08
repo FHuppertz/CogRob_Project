@@ -99,6 +99,9 @@ with open('config.yaml', 'r') as file:
 print(f"Loaded config:")
 pprint(config)
 
+time_step = config.get('time_step', 0.01)
+real_time = config.get('real_time', True)
+headless = config.get('headless', False)
 num_trials = config.get('num_trials', 1)
 num_memory_trials = config.get('num_memory_trials', 2)
 models_config = config.get('models', [])
@@ -122,7 +125,7 @@ for model_name in models_config:
         for memory_trial_index in range(num_memory_trials):
             # Create a simulation environment
             world = World.create_default_world()
-            sim = SimulationEnvironment(world, time_step=0.0, real_time=False, headless=True)
+            sim = SimulationEnvironment(world, time_step=time_step, real_time=real_time, headless=headless)
             sim.world.create_default_physical_objects()
 
             # Initialize world state checker
@@ -141,7 +144,12 @@ for model_name in models_config:
 
             robot = Robot(sim, model)
             if robot.chat_agent is not None:
-                robot.chat_agent.init_messages()    
+                robot.chat_agent.init_messages()
+
+                # Delete all memories if this is the first memory iteration
+                if memory_trial_index == 0:
+                    robot.memory.delete_all_memories()
+ 
             sim.add_subscriber(robot)
 
             # Run the simulation
@@ -212,8 +220,5 @@ for model_name in models_config:
 
             # Disconnect from PyBullet
             sim.disconnect()
-
-            # Delete memories from robot
-            robot.memory.delete_all_memories()
 
 print(f"\nResults saved incrementally to results.csv")
