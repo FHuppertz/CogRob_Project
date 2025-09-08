@@ -1,9 +1,15 @@
+from typing import Dict, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from world import World
+
+
 class WorldStateChecker:
     """
     A class to check world state conditions before and after robot task execution.
     """
     
-    def __init__(self, world, conditions_config):
+    def __init__(self, world: 'World', conditions_config: Dict):
         self.world = world
         self.conditions_config = conditions_config
         self.initial_states = {}
@@ -42,7 +48,7 @@ class WorldStateChecker:
             for position_name in place_positions:
                 place_position = location_obj.get_place_position(position_name)
                 if place_position:
-                    self.initial_states[task_index][position_name] = place_position.occupied_by
+                    self.initial_states[task_index][position_name] = str(place_position.occupied_by)
         
         print(f"Recorded initial state for task {task_index}: {self.initial_states[task_index]}")
     
