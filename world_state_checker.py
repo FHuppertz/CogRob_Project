@@ -3,6 +3,11 @@ from typing import Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from world import World
 
+from logging_utils import get_logger
+
+# Initialize logger
+logger = get_logger("STATE_CHECKER")
+
 
 class WorldStateChecker:
     """
@@ -29,12 +34,12 @@ class WorldStateChecker:
                 break
         
         if not task_condition:
-            print(f"No condition found for task index {task_index}")
+            logger.warning(f"No condition found for task index {task_index}")
             return
         
         location_info = task_condition.get('value', {}).get('location', {})
         if not location_info:
-            print("No location information found in condition")
+            logger.warning("No location information found in condition")
             return
         
         # Get the location name (should be shelf)
@@ -50,7 +55,7 @@ class WorldStateChecker:
                 if place_position:
                     self.initial_states[task_index][position_name] = str(place_position.occupied_by)
         
-        print(f"Recorded initial state for task {task_index}: {self.initial_states[task_index]}")
+        logger.info(f"Recorded initial state for task {task_index}: {self.initial_states[task_index]}")
     
     def check_final_state(self, task_index):
         """
@@ -62,6 +67,8 @@ class WorldStateChecker:
         Returns:
             dict: Results of the condition checks
         """
+        logger.info(f"Checking final state for task {task_index}...")
+
         results = {}
         
         # Find the condition configuration for this task index
@@ -72,6 +79,7 @@ class WorldStateChecker:
                 break
         
         if not task_condition:
+            logger.error(f"No condition found for task index {task_index}")
             results['status'] = "error"
             results['error'] = f"No condition found for task index {task_index}"
             return results
@@ -81,6 +89,7 @@ class WorldStateChecker:
         location_info = task_condition.get('value', {}).get('location', {})
         
         if not location_info:
+            logger.error("No location information found in condition")
             results['status'] = "error"
             results['error'] = "No location information found in condition"
             return results
@@ -92,6 +101,7 @@ class WorldStateChecker:
         # Get the location object from the world
         location_obj = self.world.get_location(location_name)
         if not location_obj:
+            logger.error(f"Location '{location_name}' not found in world")
             results['status'] = "error"
             results['error'] = f"Location '{location_name}' not found in world"
             return results

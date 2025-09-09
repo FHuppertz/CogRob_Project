@@ -6,6 +6,11 @@ if TYPE_CHECKING:
     from robot import Robot
     from memory import Memory
 
+from logging_utils import get_logger
+
+# Initialize logger
+logger = get_logger("TOOLKIT")
+
 class RobotToolkit(BaseToolkit):
     """Toolkit for robot actions like moving, grabbing, placing objects, and memory operations."""
 
@@ -53,7 +58,7 @@ class RobotToolkit(BaseToolkit):
             dict: Result containing status and message with environment description.
         """
         content = self.robot.create_environment_prompt()
-        print(f"Robot looked around to find: \n{content}")
+        logger.info(f"Robot looked around to find: \n{content}")
 
         result = {
             "status": "success",
@@ -125,10 +130,10 @@ class RobotToolkit(BaseToolkit):
             "description": description,
             "summary": summary
         }
-        print(f"Agent has finished task with result:\n")
-        print(f"status: {result['status']}")
-        print(f"description: {result['description']}")
-        print(f"summary: {result['summary']}")
+        logger.info(f"Agent has ended task with result:\n")
+        logger.info(f"status: {result['status']}")
+        logger.info(f"description: {result['description']}")
+        logger.info(f"summary: {result['summary']}")
         
         # Store the task status for evaluation
         self.end_task_status = status
@@ -153,7 +158,7 @@ class RobotToolkit(BaseToolkit):
         Returns:
             dict: Search results with status and list of matching memories
         """
-        print(f"Robot is querying memories with the query: {query}")
+        logger.info(f"Robot is querying memories with the query: {query}")
         # Search for memories using the query
         memories = self.memory.search_memories(query)
         
@@ -168,15 +173,15 @@ class RobotToolkit(BaseToolkit):
             formatted_results.append(formatted_result)
 
         if formatted_results:
-            print("The query returned the following results:")
+            logger.info("The query returned the following results:")
             for formatted_result in formatted_results:
-                print(f"status: {formatted_result['status']}")
-                print(f"description: {formatted_result['description']}")
-                print(f"summary: {formatted_result['summary']}")
-                print("---")
-            print("\n")
+                logger.info(f"status: {formatted_result['status']}")
+                logger.info(f"description: {formatted_result['description']}")
+                logger.info(f"summary: {formatted_result['summary']}")
+                logger.info("---")
+            logger.info("\n")
         else:
-            print("The memory contained no matching results.")
+            logger.info("The memory contained no matching results.")
             formatted_results = "The memory contained no matching results."
         
         return {
@@ -196,7 +201,7 @@ class RobotToolkit(BaseToolkit):
             dict: Confirmation of the addition with status
         """
         self.scratchpad.append(content)
-        print(f"The agent wrote to the scratchpad: \n{content}\n")
+        logger.info(f"The agent wrote to the scratchpad: \n{content}\n")
         return {
             "status": "success",
             "message": f"Added entry to scratchpad. Current scratchpad has {len(self.scratchpad)} entries."
@@ -218,7 +223,7 @@ class RobotToolkit(BaseToolkit):
             
         # Join entries into paragraphs (separated by blank lines)
         content = "\n\n".join(self.scratchpad)
-        print(f"The agent viewed the scratchpad containing: \n{content}\n")
+        logger.info(f"The agent viewed the scratchpad containing: \n{content}\n")
         return {
             "status": "success",
             "message": f"Scratchpad contains {len(self.scratchpad)} entries.",

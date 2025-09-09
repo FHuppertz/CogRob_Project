@@ -9,6 +9,10 @@ from camel.types import ModelPlatformType, ModelType
 
 from world import World
 from robot import Robot
+from logging_utils import get_logger
+
+# Initialize logger
+logger = get_logger("SIMULATION")
 
 dotenv.load_dotenv()
 
@@ -178,7 +182,7 @@ if __name__ == "__main__":
 
             # Check if user wants to quit
             if task_prompt.lower() in ['quit', 'exit', 'q']:
-                print("Exiting simulation...")
+                logger.info("Exiting simulation...")
                 break
 
             # Skip empty prompts
@@ -192,7 +196,7 @@ if __name__ == "__main__":
             sim.step(100)
 
     except KeyboardInterrupt:
-        print("\nSimulation interrupted by user.")
+        logger.info("\nSimulation interrupted by user.")
 
     # Disconnect from PyBullet
     sim.disconnect()

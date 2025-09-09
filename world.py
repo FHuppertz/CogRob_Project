@@ -3,6 +3,11 @@ import pybullet as p
 
 from typing import Dict, List, Optional, Union
 
+from logging_utils import get_logger
+
+# Initialize logger
+logger = get_logger("WORLD")
+
 Mug_scale = 0.1
 Table_scale = 0.5
 TV_scale = 0.8
@@ -16,7 +21,7 @@ class Location():
             ):
         self.name = name
         self.center = np.array(center)
-        self.place_positions = {}
+        self.place_positions: Dict[str, 'Location'] = {}
 
         # Add defined place positions, if any
         if isinstance(place_position, dict):
@@ -33,6 +38,9 @@ class Location():
 
     def get_place_position(self, name: str) -> Optional['Location']:
         return self.place_positions.get(name.lower().replace(" ", "_"))
+    
+    def get_place_positions(self) -> List[str]:
+        return list(self.place_positions.keys())
 
     def add_place_positions(self, positions: Dict[str, List[float]]) -> None:
         for name, position in positions.items():
@@ -100,7 +108,7 @@ class World():
             pos, _ = p.getBasePositionAndOrientation(object_id)
             return self.get_current_location(pos)
         except ValueError:
-            print(f"Object of id {object_id} could not be found in the world")
+            logger.error(f"Object of id {object_id} could not be found in the world")
             raise ValueError(f"Object of id {object_id} could not be found in the world")
 
     def get_objects_by_location(self) -> Dict[str, List[str]]:
@@ -119,7 +127,7 @@ class World():
         end = self.get_location(end_name)
 
         if start is None or end is None:
-            print("Invalid start or end")
+            logger.warning("Invalid start or end")
             return []
 
         goal = False

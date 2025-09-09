@@ -6,6 +6,10 @@ from typing import Dict, TYPE_CHECKING
 
 from toolkit import RobotToolkit
 from memory import Memory
+from logging_utils import get_logger
+
+# Initialize logger
+logger = get_logger("ROBOT")
 
 if TYPE_CHECKING:
     from simulation import SimulationEnvironment
@@ -110,7 +114,7 @@ Guidelines for optimal execution:
             response = None
             previous_length = 0
             consecutive_newlines = 0
-            print("Generating streaming response...")
+            logger.info("Generating streaming response...")
             for i, response in enumerate(self.chat_agent.step(message)):
                 if msgs := getattr(response, "msgs"):
                     current_content = msgs[0].content
@@ -147,23 +151,23 @@ Guidelines for optimal execution:
                 prompt += "You now have the following new task:\n"
             prompt += f"<task>\n{task_prompt}\n</task>"
 
-            print(f"Invoking agent with prompt:\n{prompt}")
+            logger.info(f"Invoking agent with prompt:\n{prompt}")
             response = self._step(prompt)
             if response is not None and hasattr(response, "msgs"):
-                print(f"Agent response:\n{response.msgs[0].content}")
+                logger.info(f"Agent response:\n{response.msgs[0].content}")
             
             self.num_invokes += 1
             while self.toolkit is not None and not self.toolkit.completion_requested:
-                print(f"Invoking agent again as completion was not requested...")
+                logger.info("Invoking agent again as completion was not requested...")
                 prompt = self.create_environment_prompt() + "\n"
                 prompt += "You currently have the following task:\n" + \
                     f"<task>\n{task_prompt}\n</task>\n" + \
-                    "Use the end_task tool to request completion of the task and to" + \
-                    "receive the next task."
+                    "Use your tools to perform this task, or use the end_task tool to request " + \
+                    "completion of the task and to receive the next task."
                 
                 response = self._step(prompt)
                 if response is not None and hasattr(response, "msgs"):
-                    print(f"Agent response:\n{response.msgs[0].content}")
+                    logger.info(f"Agent response:\n{response.msgs[0].content}")
 
                 self.num_invokes += 1
                 if self.num_invokes >= self.max_num_invokes:
@@ -178,7 +182,7 @@ Guidelines for optimal execution:
                 self.toolkit.completion_requested = False
 
         else:
-            print("No chat agent available, please provide a model")
+            logger.info("No chat agent available, please provide a model")
 
     def create_environment_prompt(self) -> str:
         """
@@ -210,13 +214,13 @@ Guidelines for optimal execution:
             str: 'success' if movement was successful, 'failure' otherwise
         """
         current_location_name = self.env.world.get_current_location(self.position)
-        print(f"Robot is moving from current location: {current_location_name}; Target location: {target}")
+        logger.info(f"Robot is moving from current location: {current_location_name}; Target location: {target}")
 
         # Handle both location names and direct positions
         if isinstance(target, str):
             # Generate path to target location
             if current_location_name is None:
-                print("Current location not found")
+                logger.warning("Current location not found")
                 return {
                     'status': 'failure',
                     'message': "Current location not found"
@@ -227,15 +231,15 @@ Guidelines for optimal execution:
                 # Fallback to direct movement if no path found
                 location = self.env.world.get_location(target)
                 if location is None:
-                    print(f"Location '{target}' not found")
+                    logger.warning(f"Location '{target}' not found")
                     return {
                         'status': 'failure',
                         'message': f"Location '{target}' not found"
                     }
                 target_pos = location.center
-                print(f"No path found, moving directly to target at {target_pos}")
+                logger.info(f"No path found, moving directly to target at {target_pos}")
             else:
-                print(f"Path found: {[self.env.world.get_current_location(waypoint) for waypoint in self.path]}")
+                logger.info(f"Path found: {[self.env.world.get_current_location(waypoint) for waypoint in self.path]}")
                 # Use path planning
                 self.waypoint_index = 0
                 target_pos = np.array(self.path[0])
@@ -250,6 +254,7 @@ Guidelines for optimal execution:
         # Run simulation until we reach the target or timeout
         for _ in range(2000):
             if not "move" in self.activity:
+                logger.info(f"Successfully reached the target {target}")
                 return {
                     'status': 'success',
                     'message': f'You successfully reached the target {target}'
@@ -269,6 +274,7 @@ Guidelines for optimal execution:
             angularVelocity=[0, 0, 0]
         )
 
+        logger.error(f"Timed out while moving to target {target}")
         return {
             'status': 'timeout',
             'message': f'Timed out while moving to target {target}'
@@ -328,12 +334,12 @@ Guidelines for optimal execution:
         Returns:
             str: 'success' if grabbing was successful, 'failure' otherwise
         """
-        print(f"Robot is trying to grab item {target_name_or_id}")
+        logger.info(f"Robot is trying to grab item {target_name_or_id}")
         # Handle both object names and direct IDs
         if isinstance(target_name_or_id, str):
             target_id = self.env.world.get_object(target_name_or_id)
             if target_id is None:
-                print(f"Object '{target_name_or_id}' not found in world objects")
+                logger.warning(f"Object '{target_name_or_id}' not found in world objects")
                 return {
                     'status': 'failure',
                     'message': f'Object "{target_name_or_id}" not found'
@@ -344,7 +350,7 @@ Guidelines for optimal execution:
         # Set up grab state
         if self.held_object_id is not None:
             held_object_name = self.env.world.get_object_by_id(self.held_object_id)
-            print(f"Robot is already holding object {held_object_name}")
+            logger.info(f"Robot is already holding object {held_object_name}")
             return {
                 'status': 'failure',
                 'message': f'You are currently holding {held_object_name}, and cannot hold more than one item at once'
@@ -352,10 +358,13 @@ Guidelines for optimal execution:
 
         self.action_target = target_id
         self.activity.add("grab")
+        logger.info(f"Grab activity initiated")
 
         # Run simulation until we grab the object or timeout
         for _ in range(1000):
             if not "grab" in self.activity:
+                # Successfully grabbed the object
+                logger.info(f"Successfully grabbed object")
                 return {
                     'status': 'success',
                     'message': 'Object grabbed successfully'
@@ -381,6 +390,7 @@ Guidelines for optimal execution:
         for _ in range(100):
             self.env.step(1)
 
+        logger.error(f"Timed out trying to grab object")
         return {
             'status': 'timeout',
             'message': 'Timed out trying to grab object'
@@ -480,16 +490,23 @@ Guidelines for optimal execution:
         Returns:
             str: 'success' if placement was successful, 'failure' otherwise
         """
-        print(f"Robot is trying to place {self.env.world.get_object_by_id(self.held_object_id)} to {location}")
+        logger.info(f"Robot is trying to place {self.env.world.get_object_by_id(self.held_object_id)} to {location}")
         if loc := self.env.world.get_location(location):
             target_position = None
             if place_position is None:
-                target_location = loc.get_place_position("top")
+                target_location = loc.get_place_position(loc.get_place_positions()[0])
+
+                if not target_location:
+                    return {
+                        "status": "failure",
+                        "message": f"You cannot place items at the provided location {location}"
+                    }
             else:
-                print(f"Place position: {place_position}")
                 target_location = loc.get_place_position(place_position)
+                logger.info(f"Place position: {target_location.name if target_location else None}")
 
             if target_location is None:
+                logger.error(f"The provided place position does not exist in the location {location}")
                 return {
                     "status": "failure",
                     "message": f"The provided place position {place_position} does not "
@@ -498,6 +515,7 @@ Guidelines for optimal execution:
             else:
                 target_position = target_location.center
                 if target_location.occupied_by is not None:
+                    logger.error(f"The target place position is occupied by {target_location.occupied_by}")
                     return {
                         "status": "failure",
                         "message": f"The provided place position {place_position} "
@@ -519,10 +537,12 @@ Guidelines for optimal execution:
         # Set up place state
         self.action_target = [np.array(target_position), target_location]
         self.activity.add("place")
+        logger.info(f"Place activity initiated for object at location: {target_location.name}")
 
         # Run simulation until we place the object or timeout
         for _ in range(1000):
             if not "place" in self.activity:
+                logger.info(f"Successfully placed object at location {target_location.name}")
                 return {
                     "status": "success",
                     "message": "Object placed successfully"
@@ -545,6 +565,7 @@ Guidelines for optimal execution:
                                     velocityGain=1.0,
                                     maxVelocity=2.0
             )
+        logger.error(f"Timed out trying to place object at location {location}")
         return {
             "status": "failure",
             "message": "Failed to place object"

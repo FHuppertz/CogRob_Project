@@ -14,6 +14,10 @@ from world import World
 from robot import Robot
 from simulation import SimulationEnvironment
 from world_state_checker import WorldStateChecker
+from logging_utils import get_logger
+
+# Initialize logger
+logger = get_logger("EVALUATION")
 
 
 def load_model(model_name):
@@ -43,7 +47,7 @@ def load_model(model_name):
     }
     
     if model_name not in model_mapping:
-        print(f"Unknown model: {model_name}")
+        logger.warning(f"Unknown model: {model_name}")
         return None
     
     model_info = model_mapping[model_name]
@@ -57,7 +61,7 @@ def load_model(model_name):
                     # model_config_dict={"temperature": 0.5},
                 )
             else:
-                print("OPENAI_API_KEY not found in environment variables")
+                logger.warning("OPENAI_API_KEY not found in environment variables")
                 return None
                 
         elif model_name == "claude-3.5-sonnet":
@@ -69,7 +73,7 @@ def load_model(model_name):
                     # model_config_dict={"temperature": 0.5},
                 )
             else:
-                print("ANTHROPIC_API_KEY not found in environment variables")
+                logger.warning("ANTHROPIC_API_KEY not found in environment variables")
                 return None
                 
         elif model_name == "qwen3-coder-480b-a35b-instruct":
@@ -85,18 +89,18 @@ def load_model(model_name):
                         }
                 )
             else:
-                print("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
+                logger.warning("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
                 return None
                 
     except Exception as e:
-        print(f"Error loading model {model_name}: {e}")
+        logger.error(f"Error loading model {model_name}: {e}")
         return None
 
 # Load configuration from YAML file
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
-print(f"Loaded config:")
+logger.info(f"Loaded config:")
 pprint(config)
 
 time_step = config.get('time_step', 0.01)
@@ -133,7 +137,7 @@ for model_name in models_config:
 
             # Load model if specified
             if model_name:
-                print(f"Loading model: {model_name}")
+                logger.info(f"Loading model: {model_name}")
                 model = load_model(model_name)
 
                 if model is None:
@@ -157,7 +161,7 @@ for model_name in models_config:
 
             # Loop through prompts from config
             for task_index, task_prompt in enumerate(prompts_config):
-                print(f"Executing prompt {task_index + 1}/{len(prompts_config)}: {task_prompt}")
+                logger.info(f"Executing prompt {task_index + 1}/{len(prompts_config)}: {task_prompt}")
 
                 # Record initial state before robot invocation
                 state_checker.record_initial_state(task_index)
@@ -205,9 +209,9 @@ for model_name in models_config:
                     
                     writer.writerow(result_dict)
 
-                print(f"State check results for task {task_index}:")
+                logger.info(f"State check results for task {task_index}:")
                 pprint(results)
-                print(f"Collected data: Model={result_dict['Model']}, Memory={result_dict['Memory']}, "
+                logger.info(f"Collected data: Model={result_dict['Model']}, Memory={result_dict['Memory']}, "
                       f"Task={result_dict['Task']}, Trial={result_dict['Trial']}, "
                       f"Toolcalls={result_dict['Toolcalls']}, Belief={result_dict['Belief']}, "
                       f"Truth={result_dict['Truth']}, Accuracy={result_dict['Accuracy']}, "
@@ -218,10 +222,8 @@ for model_name in models_config:
                 sim.step(100)
 
                 if not results.get('status', 'error') == "success":
-                    print(f"Stopping at task index {task_index} as robot was unsuccessful...")
+                    logger.info(f"Stopping at task index {task_index} as robot was unsuccessful...")
                     break
 
             # Disconnect from PyBullet
             sim.disconnect()
-
-print(f"\nResults saved incrementally to results.csv")

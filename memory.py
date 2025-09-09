@@ -2,6 +2,11 @@ import chromadb
 from typing import List, Dict, Any, Optional
 import uuid
 
+from logging_utils import get_logger
+
+# Initialize logger
+logger = get_logger("MEMORY")
+
 
 class Memory:
     """
@@ -130,7 +135,7 @@ class Memory:
                 all_ids = [memory['id'] for memory in all_memories]
                 self.collection.delete(ids=all_ids)
 
-                print(f"Deleted {len(all_ids)} (all) memories")
+                logger.info(f"Deleted {len(all_ids)} (all) memories")
             return True
         except Exception:
             return False
