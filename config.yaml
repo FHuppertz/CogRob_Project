@@ -11,6 +11,7 @@ models:
   # - "gemini-2.5-pro"
   # - "gemini-2.5-flash"
   - "deepseek-v3.1"
+  # - "devstral-small-2507"
 prompts: 
   - "Put away all the items into the shelf."
   - "Swap the mug and the cube in the shelf."
