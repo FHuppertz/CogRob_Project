@@ -1,3 +1,4 @@
+import backoff
 import pybullet as p
 import numpy as np
 
@@ -103,6 +104,11 @@ Guidelines for optimal execution:
     def position(self):
         pos, ori = p.getBasePositionAndOrientation(self.base_id)
         return pos
+
+    @backoff.on_exception(backoff.expo, Exception, max_tries=10)
+    def _step_with_backoff(self, **kwargs):
+        if self.chat_agent:
+            return self.chat_agent.step(**kwargs)
     
     def _step(self, message):
         """Internal method to handle agent stepping with optional streaming."""
@@ -135,7 +141,7 @@ Guidelines for optimal execution:
                     previous_length = len(current_content)
             print()
         else:
-            response = self.chat_agent.step(message)
+            response = self._step_with_backoff(input_message=message)
 
         return response
 
@@ -167,7 +173,8 @@ Guidelines for optimal execution:
                 
                 response = self._step(prompt)
                 if response is not None and hasattr(response, "msgs"):
-                    logger.info(f"Agent response:\n{response.msgs[0].content}")
+                    if response.msgs:
+                        logger.info(f"Agent response:\n{response.msgs[0].content}")
 
                 self.num_invokes += 1
                 if self.num_invokes >= self.max_num_invokes:
@@ -529,6 +536,7 @@ Guidelines for optimal execution:
 
         # Check if we're actually holding something
         if self.constraint_id is None:
+            logger.error(f"The robot is not holding an object to perform a place action")
             return {
                 "status": "failure",
                 "message": "You are not holding anything"
