@@ -1,81 +1,224 @@
+# Import necessary libraries
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-
-# Make sure "plots" directory exists
-os.makedirs("plots", exist_ok=True)
-
-# Load CSV
-df = pd.read_csv("results.csv")
+import seaborn as sns
+import numpy as np
 
 # ============================
-# Loop over memory states
+# 1. DATA LOADING AND PREPARATION
 # ============================
-memory_groups = df.groupby("Memory")
-for memory_state, mem_group in memory_groups:
-    print(f"Processing Memory state: {memory_state}")
+# Create plots directory
+plots_dir = "plots"
+os.makedirs(plots_dir, exist_ok=True)
 
-    # ============================
-    # Bar plot: mean Accuracy per Model and Task
-    # ============================
-    mean_accuracy = mem_group.groupby(["Model", "Task"])["Accuracy"].mean().unstack() * 100.0
+# Load CSV file
+try:
+    df = pd.read_csv("results.csv")
+except FileNotFoundError:
+    print("Error: 'results.csv' not found. Please make sure the file is in the same directory.")
+    exit()
 
-    ax = mean_accuracy.plot(
+# Map long model names to shorter names
+model_mapping = {
+    "qwen3-coder-480b-a35b-instruct": "Qwen3 Coder",
+    "gpt-4.1-2025-04-14": "GPT-4.1",
+    "claude-sonnet-4-20250514": "Claude Sonnet",
+    "gemini-2.5-pro": "Gemini 2.5 Pro",
+}
+df['Model'] = df['Model'].map(model_mapping)
+
+# Conditionally adjust 'Toolcalls' based on 'Stopped' column
+df.loc[(df['Stopped'] == 1) & (df['Toolcalls'] > 0), 'Toolcalls'] -= 1
+
+# ============================
+# 2. PLOTTING FUNCTIONS
+# ============================
+def create_bar_plot(data, value_col, title, ytick_step, filename):
+    """
+    Generates and saves a bar plot for a given value column.
+    """
+    ax = (data.groupby(["Model", "Task"])[value_col].mean() * 100).unstack().plot(
         kind="bar",
-        figsize=(8, 6),
-        title=f"Mean Accuracy across Models and Tasks (Memory {memory_state})"
+        figsize=(10, 6),
+        title=title
     )
     plt.xlabel("Model")
-    plt.ylabel("Mean Accuracy [%]")
+    plt.ylabel(f"Mean {value_col} [%]")
     plt.legend(title="Task")
 
-    # Y-axis ticks
-    yticks = [i for i in range(0, 101, 10)]
+    yticks = [i for i in range(0, 101, ytick_step)]
     plt.yticks(yticks)
-    plt.ylim(0.0, 100.0)
+    plt.ylim(0.0, 110.0)
     plt.grid(axis="y", linestyle="--", alpha=0.7)
 
-    # Add labels on top of bars
     for container in ax.containers:
         ax.bar_label(container, fmt="%.1f", padding=3)
 
-    plt.savefig(f"plots/mean_accuracy_memory_{memory_state}.png", dpi=300, bbox_inches="tight")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, filename), dpi=300)
     plt.close()
 
-    mean_truth = mem_group.groupby(["Model", "Task"])["Truth"].mean().unstack() * 100.0
+def create_grouped_boxplot(model_name, model_group):
+    """
+    Generates and saves a grouped boxplot for a specific model.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_title(f"Toolcalls per Memory State and Task for Model {model_name}")
+    ax.set_xlabel("Memory State")
+    ax.set_ylabel("Toolcalls")
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
 
-    ax = mean_truth.plot(
-        kind="bar",
-        figsize=(8, 6),
-        title=f"Mean Truth across Models and Tasks (Memory {memory_state})"
+    ytick_step_boxplot = 5
+    ymax = model_group['Toolcalls'].max()
+    yticks = [i for i in range(0, int(ymax) + 1, ytick_step_boxplot)]
+    ax.set_yticks(yticks)
+
+    memory_states = sorted(model_group['Memory'].unique())
+    tasks = sorted(model_group['Task'].unique())
+    num_tasks = len(tasks)
+
+    plot_data, x_positions, xtick_labels = [], [], []
+    group_width = num_tasks + 1
+
+    for i, memory in enumerate(memory_states):
+        xtick_labels.append(memory)
+        for j, task in enumerate(tasks):
+            data = model_group[(model_group['Memory'] == memory) & (model_group['Task'] == task)]['Toolcalls']
+            plot_data.append(data)
+            x_positions.append(i * group_width + j)
+
+    bplots = ax.boxplot(plot_data, positions=x_positions, widths=0.8, patch_artist=True)
+    colors = plt.cm.tab10.colors
+    for i in range(len(plot_data)):
+        bplots['boxes'][i].set_facecolor(colors[i % num_tasks])
+
+    for median in bplots['medians']:
+        median.set_color('black')
+
+    for i, median in enumerate(bplots['medians']):
+        x_pos = x_positions[i]
+        y_pos = median.get_ydata()[0]
+        ax.text(x_pos, y_pos, f"{y_pos:.0f}",
+                ha='center', va='center', fontsize=10, color='white',
+                fontweight='bold', bbox=dict(facecolor='black', edgecolor='none', boxstyle='round,pad=0.2'))
+
+    ax.legend(handles=[bplots['boxes'][i] for i in range(num_tasks)], labels=tasks, title="Task")
+
+    xtick_positions = [i * group_width + (num_tasks - 1) / 2 for i in range(len(memory_states))]
+    ax.set_xticks(xtick_positions)
+    ax.set_xticklabels(xtick_labels)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, f"toolcalls_model_{model_name}_by_memory_and_task.png"), dpi=300)
+    plt.close()
+
+def create_violin_plot(data_df, x_col, value_col, title, filename):
+    """
+    Generates and saves a violin plot to show the distribution of a variable.
+    """
+    plt.figure(figsize=(12, 7))
+    sns.violinplot(
+        x=x_col,
+        y=value_col,
+        hue="Task",
+        data=data_df,
+        split=True,
+        inner="quartile",
+        palette="pastel"
     )
-    plt.xlabel("Model")
-    plt.ylabel("Mean Truth [%]")
-    plt.legend(title="Task")
-
-    # Y-axis ticks
-    yticks = [i for i in range(0, 101, 10)]
-    plt.yticks(yticks)
-    plt.ylim(0.0, 100.0)
-    plt.grid(axis="y", linestyle="--", alpha=0.7)
-
-    # Add labels on top of bars
-    for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f", padding=3)
-
-    plt.savefig(f"plots/mean_truth_memory_{memory_state}.png", dpi=300, bbox_inches="tight")
+    plt.title(title)
+    plt.xlabel(x_col)
+    plt.ylabel(f"Distribution of {value_col}")
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, filename), dpi=300)
     plt.close()
 
-    # ============================
-    # Per-model Boxplots for Toolcalls
-    # ============================
-    model_groups = mem_group.groupby("Model")
-    for model_name, model_group in model_groups:
-        model_group.boxplot(column="Toolcalls", by="Task")
-        plt.title(f"Toolcalls per Task for Model {model_name} (Memory {memory_state})")
-        plt.suptitle("")
-        plt.xlabel("Task")
-        plt.ylabel("Toolcalls")
+def create_confusion_heatmap(data_df, model_name, filename):
+    """
+    Generates a confusion matrix heatmap for a given model, comparing Belief to Truth.
+    Excludes rows where 'Stopped' == 1.
+    """
+    # Filter out rows where the run was stopped
+    filtered_df = data_df[data_df['Stopped'] != 1].copy()
 
-        plt.savefig(f"plots/toolcalls_memory_{memory_state}_model_{model_name}.png", dpi=300, bbox_inches="tight")
-        plt.close()
+    if filtered_df.empty:
+        print(f"Warning: No data for {model_name} with 'Stopped' != 1. Skipping confusion matrix plot.")
+        return
+
+    # Create a base 2x2 confusion matrix with zeros
+    base_matrix = pd.DataFrame(
+        np.zeros((2, 2)),
+        index=pd.Index([0, 1], name='Actual Outcome (Truth)'),
+        columns=pd.Index([0, 1], name='Predicted Outcome (Belief)')
+    )
+
+    # Calculate the raw confusion matrix from the filtered data
+    raw_matrix = pd.crosstab(
+        filtered_df['Truth'],
+        filtered_df['Belief'],
+        rownames=['Actual Outcome (Truth)'],
+        colnames=['Predicted Outcome (Belief)']
+    )
+
+    # Add the raw counts to the base matrix
+    for (truth, belief), count in raw_matrix.stack().items():
+        base_matrix.loc[truth, belief] = count
+
+    # Normalize the confusion matrix to get percentages
+    row_sums = base_matrix.sum(axis=1)
+    # Avoid division by zero for rows with no data by replacing sum with 1
+    # where the sum is 0
+    row_sums[row_sums == 0] = 1 
+    normalized_matrix = base_matrix.div(row_sums, axis=0) * 100
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(
+        normalized_matrix,
+        annot=True,
+        fmt='.2f',  # Format to 2 decimal places for percentages
+        cmap='Blues',
+        xticklabels=['Failure', 'Success'],
+        yticklabels=['Failure', 'Success']
+    )
+    plt.title(f"Confusion Matrix for {model_name}")
+    plt.xlabel("Predicted Outcome (Belief) in %")
+    plt.ylabel("Actual Outcome (Truth) in %")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, filename), dpi=300)
+    plt.close()
+
+
+# ============================
+# 3. MAIN EXECUTION
+# ============================
+def generate_all_plots(dataframe):
+    print("Starting data analysis and plot generation.")
+
+    # Generate bar plots
+    for memory_state, mem_group in dataframe.groupby("Memory"):
+        print(f"Processing bar plots for Memory state: {memory_state}")
+        create_bar_plot(mem_group, "Accuracy", f"Mean Accuracy across Models and Tasks (Memory {memory_state})", 10, f"mean_accuracy_memory_{memory_state}.png")
+        create_bar_plot(mem_group, "Truth", f"Mean Truth across Models and Tasks (Memory {memory_state})", 10, f"mean_truth_memory_{memory_state}.png")
+
+    # Generate grouped boxplots and confusion heatmaps for each model
+    for model_name, model_group in dataframe.groupby("Model"):
+        print(f"Generating plots for Model: {model_name}")
+        create_grouped_boxplot(model_name, model_group)
+        create_confusion_heatmap(model_group, model_name, f"confusion_matrix_{model_name}.png")
+
+    # Generate violin plot for each model
+    print("\nGenerating violin plots for each model.")
+    for model_name, model_group in dataframe.groupby("Model"):
+        create_violin_plot(
+            model_group,
+            "Memory",
+            "Toolcalls",
+            f"Toolcalls Distribution by Memory State and Task for {model_name}",
+            f"toolcalls_violin_plot_{model_name}.png"
+        )
+    print("Plot generation complete. Check the 'plots' directory for your images.")
+
+# Run the plot generation
+generate_all_plots(df)
