@@ -52,6 +52,10 @@ def load_model(model_name):
             "platform": ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
             "type": "deepseek-v3.1"
         },
+        "devstral-small-2507": {
+            "platform": ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
+            "type": "devstral-small-2507"
+        },
         "gemini-2.5-pro": {
             "platform": ModelPlatformType.GEMINI,
             "type": ModelType.GEMINI_2_5_PRO
@@ -92,38 +96,6 @@ def load_model(model_name):
                 logger.warning("ANTHROPIC_API_KEY not found in environment variables")
                 return None
                 
-        elif model_name == "qwen3-coder-480b-a35b-instruct":
-            if os.environ.get("LOCAL_API_KEY") and os.environ.get("LOCAL_API_HOST"):
-                return ModelFactory.create(
-                    model_platform=model_info["platform"],
-                    model_type=model_info["type"],
-                    api_key=os.environ.get("LOCAL_API_KEY"),
-                    url=os.environ.get("LOCAL_API_HOST"),
-                    model_config_dict={
-                        "stream": True,
-                        "temperature": 0.7,
-                        }
-                )
-            else:
-                logger.warning("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
-                return None
-            
-        elif model_name == "deepseek-v3.1":
-            if os.environ.get("LOCAL_API_KEY") and os.environ.get("LOCAL_API_HOST"):
-                return ModelFactory.create(
-                    model_platform=model_info["platform"],
-                    model_type=model_info["type"],
-                    api_key=os.environ.get("LOCAL_API_KEY"),
-                    url=os.environ.get("LOCAL_API_HOST"),
-                    model_config_dict={
-                        "stream": True,
-                        "temperature": 0.6,
-                        }
-                )
-            else:
-                logger.warning("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
-                return None
-        
         elif "gemini" in model_name:
             if os.environ.get("GEMINI_API_KEY"):
                 return ModelFactory.create(
@@ -136,6 +108,36 @@ def load_model(model_name):
                 )
             else:
                 logger.warning("GEMINI_API_KEY not found in environment variables")
+                return None
+            
+        else:
+            if os.environ.get("LOCAL_API_KEY") and os.environ.get("LOCAL_API_HOST"):
+                model_config_dict = {}
+                if model_name == "qwen3-coder-480b-a35b-instruct":
+                    model_config_dict={
+                        "stream": True,
+                        "temperature": 0.6,
+                        }
+                elif model_name == "deepseek-v3.1":
+                    model_config_dict={
+                        # "stream": True,
+                        "temperature": 0.6,
+                        }
+                elif model_name == "Devstral-Small-2507":
+                    model_config_dict={
+                        "stream": True,
+                        "temperature": 0.15,
+                        }
+                
+                return ModelFactory.create(
+                    model_platform=model_info["platform"],
+                    model_type=model_info["type"],
+                    api_key=os.environ.get("LOCAL_API_KEY"),
+                    url=os.environ.get("LOCAL_API_HOST"),
+                    model_config_dict=model_config_dict
+                )
+            else:
+                logger.warning("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
                 return None
                 
     except Exception as e:
