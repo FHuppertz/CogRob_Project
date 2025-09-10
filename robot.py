@@ -159,7 +159,7 @@ Guidelines for optimal execution:
 
             logger.info(f"Invoking agent with prompt:\n{prompt}")
             response = self._step(prompt)
-            if response is not None and hasattr(response, "msgs"):
+            if response is not None and hasattr(response, "msgs") and response.msgs:
                 logger.info(f"Agent response:\n{response.msgs[0].content}")
             
             self.num_invokes += 1
@@ -172,9 +172,8 @@ Guidelines for optimal execution:
                     "completion of the task and to receive the next task."
                 
                 response = self._step(prompt)
-                if response is not None and hasattr(response, "msgs"):
-                    if response.msgs:
-                        logger.info(f"Agent response:\n{response.msgs[0].content}")
+                if response is not None and hasattr(response, "msgs") and response.msgs:
+                    logger.info(f"Agent response:\n{response.msgs[0].content}")
 
                 self.num_invokes += 1
                 if self.num_invokes >= self.max_num_invokes:
@@ -405,15 +404,17 @@ Guidelines for optimal execution:
 
     def handle_grab(self):
         assert "grab" in self.activity and self.action_target is not None
-        assert type(self.action_target) is int
+        assert type(self.action_target) is int, f"self.action_target {self.action_target} is {type(self.action_target)}, not int"
 
         target_pos, target_ori = p.getBasePositionAndOrientation(self.action_target)
         joint_angles = p.calculateInverseKinematics(self.robot_id, 6, target_pos)
 
         target_location = None
-        for place in self.env.world.get_location(self.env.world.get_object_location(self.action_target)).place_positions.values():
-            if np.linalg.norm(np.array(place.center) - np.array(target_pos)) <= 0.15:
-                target_location = place
+
+        target_object_location = self.env.world.get_location(self.env.world.get_object_location(self.action_target))
+        if target_object_location:
+            place_positions = target_object_location.place_positions.values()
+            target_location = min(place_positions, key=lambda x: float(np.linalg.norm(np.array(x.center - np.array(target_pos)))))
 
         # Get end-effector position
         ee_index = 6
@@ -424,6 +425,10 @@ Guidelines for optimal execution:
         if dist < 0.75:
             if target_location is not None:
                 target_location.occupied_by = None
+                logger.info(f"Removed object {self.env.world.get_object_by_id(self.action_target)} " \
+                        + f"from {target_location.name if target_location else None}")
+            else: 
+                logger.error(f"Target location for setting object occupancy to None was not found")
 
             offset = np.array([0.25, 0, 0])
             # Constraints to simulate grabbing (modified ChatGPT)
