@@ -9,7 +9,8 @@ models:
   # - "claude-3.5-sonnet"
   # - "claude-sonnet-4"
   # - "gemini-2.5-pro"
-  - "gemini-2.5-flash"
+  # - "gemini-2.5-flash"
+  - "deepseek-v3.1"
 prompts: 
   - "Put away all the items into the shelf."
   - "Swap the mug and the cube in the shelf."

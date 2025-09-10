@@ -48,6 +48,10 @@ def load_model(model_name):
             "platform": ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
             "type": "qwen3-coder-480b-a35b-instruct"
         },
+        "deepseek-v3.1": {
+            "platform": ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
+            "type": "deepseek-v3.1"
+        },
         "gemini-2.5-pro": {
             "platform": ModelPlatformType.GEMINI,
             "type": ModelType.GEMINI_2_5_PRO
@@ -98,6 +102,22 @@ def load_model(model_name):
                     model_config_dict={
                         "stream": True,
                         "temperature": 0.7,
+                        }
+                )
+            else:
+                logger.warning("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
+                return None
+            
+        elif model_name == "deepseek-v3.1":
+            if os.environ.get("LOCAL_API_KEY") and os.environ.get("LOCAL_API_HOST"):
+                return ModelFactory.create(
+                    model_platform=model_info["platform"],
+                    model_type=model_info["type"],
+                    api_key=os.environ.get("LOCAL_API_KEY"),
+                    url=os.environ.get("LOCAL_API_HOST"),
+                    model_config_dict={
+                        "stream": True,
+                        "temperature": 0.6,
                         }
                 )
             else:
