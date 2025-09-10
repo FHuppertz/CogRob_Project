@@ -46,13 +46,10 @@ class RobotToolkit(BaseToolkit):
         return wrapper
 
     @tool_call_counter
-    def look_around(self, target: Union[str, List[float]]) -> dict:
+    def look_around(self) -> dict:
         """Look around and return information about the environment. This method
         creates an environment prompt that describes the current state of the
         world, including locations and objects.
-
-        Args:
-            target: Either a string name of a location or [x, y] coordinates.
 
         Returns:
             dict: Result containing status and message with environment description.
@@ -68,7 +65,7 @@ class RobotToolkit(BaseToolkit):
         return result
 
     @tool_call_counter
-    def move_to(self, target: Union[str, List[float]]) -> dict:
+    def move_to(self, target: str) -> dict:
         """Move to a target location.
 
         Args:
@@ -81,7 +78,7 @@ class RobotToolkit(BaseToolkit):
         return result
 
     @tool_call_counter
-    def grab(self, target: Union[str, int]) -> dict:
+    def grab(self, target: str) -> dict:
         """Grab an object by name or ID. You must move to the location containing
         the object first before grabbing it. Grabbing an object makes the object
         the currently held object.
@@ -96,14 +93,14 @@ class RobotToolkit(BaseToolkit):
         return result
 
     @tool_call_counter
-    def place(self, location: str, place_position: Optional[str]) -> dict:
+    def place(self, location: str, place_position: str) -> dict:
         """Place the currently held object at a target location. You must move to
         the location first before placing the object there, and must also have an
         object that is currently being held.
 
         Args:
             location: A string name of a location
-            place_position: Optional position within the location to place the object
+            place_position: Place position within the location to place the object
 
         Returns:
             dict: Result of the place action including status.
@@ -233,7 +230,7 @@ class RobotToolkit(BaseToolkit):
     def get_tools(self) -> list[FunctionTool]:
         """Get list of available tools."""
         return [
-            FunctionTool(self.look_around),
+            FunctionTool(self.look_around, ),
             FunctionTool(self.move_to),
             FunctionTool(self.grab),
             FunctionTool(self.place),
