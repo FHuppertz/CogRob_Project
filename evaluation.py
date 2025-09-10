@@ -34,15 +34,27 @@ def load_model(model_name):
     model_mapping = {
         "gpt-4.1": {
             "platform": ModelPlatformType.OPENAI,
-            "type": "gpt-4.1"
+            "type": ModelType.GPT_4_1
         },
         "claude-3.5-sonnet": {
             "platform": ModelPlatformType.ANTHROPIC,
             "type": ModelType.CLAUDE_3_5_SONNET
         },
+        "claude-sonnet-4": {
+            "platform": ModelPlatformType.ANTHROPIC,
+            "type": ModelType.CLAUDE_SONNET_4
+        },
         "qwen3-coder-480b-a35b-instruct": {
             "platform": ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
-            "type": "local"
+            "type": "qwen3-coder-480b-a35b-instruct"
+        },
+        "gemini-2.5-pro": {
+            "platform": ModelPlatformType.GEMINI,
+            "type": ModelType.GEMINI_2_5_PRO
+        },
+        "gemini-2.5-flash": {
+            "platform": ModelPlatformType.GEMINI,
+            "type": ModelType.GEMINI_2_5_FLASH
         }
     }
     
@@ -64,7 +76,7 @@ def load_model(model_name):
                 logger.warning("OPENAI_API_KEY not found in environment variables")
                 return None
                 
-        elif model_name == "claude-3.5-sonnet":
+        elif "claude" in model_name:
             if os.environ.get("ANTHROPIC_API_KEY"):
                 return ModelFactory.create(
                     model_platform=model_info["platform"],
@@ -90,6 +102,20 @@ def load_model(model_name):
                 )
             else:
                 logger.warning("LOCAL_API_KEY or LOCAL_API_HOST not found in environment variables")
+                return None
+        
+        elif "gemini" in model_name:
+            if os.environ.get("GEMINI_API_KEY"):
+                return ModelFactory.create(
+                    model_platform=model_info["platform"],
+                    model_type=model_info["type"],
+                    model_config_dict={
+                        "stream": True,
+                        # "temperature": 0.7,
+                        }
+                )
+            else:
+                logger.warning("GEMINI_API_KEY not found in environment variables")
                 return None
                 
     except Exception as e:
@@ -183,7 +209,7 @@ for model_name in models_config:
 
                 # Extract data for CSV using dictionary
                 result_dict = {
-                    'Model': model_name if model_name else "None",
+                    'Model': robot.chat_agent.model_backend.model_type if robot.chat_agent else "None",
                     'Memory': memory_trial_index,
                     'Task': task_index + 1,  # 1-based indexing for tasks
                     'Trial': iteration_index + 1,  # 1-based indexing for trials
