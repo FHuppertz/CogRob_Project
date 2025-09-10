@@ -306,7 +306,7 @@ class World():
 
 
         # Create Mug
-        Mug_pos = np.array([6.0, 6.0, 2.0*0.3+0.1])
+        Mug_pos = np.array([6.0, 6.0, 2.0*Table_scale+0.1])
         Mug_orientation = p.getQuaternionFromEuler([0.0, 0.0, 0])
 
         half_size = np.array([1.4, 1, 1.0])*Mug_scale
