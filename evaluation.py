@@ -120,10 +120,10 @@ def load_model(model_name):
                         }
                 elif model_name == "deepseek-v3.1":
                     model_config_dict={
-                        # "stream": True,
+                        "stream": True,
                         "temperature": 0.6,
                         }
-                elif model_name == "Devstral-Small-2507":
+                elif model_name == "devstral-small-2507":
                     model_config_dict={
                         "stream": True,
                         "temperature": 0.15,

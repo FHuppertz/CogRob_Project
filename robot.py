@@ -414,7 +414,8 @@ Guidelines for optimal execution:
         target_object_location = self.env.world.get_location(self.env.world.get_object_location(self.action_target))
         if target_object_location:
             place_positions = target_object_location.place_positions.values()
-            target_location = min(place_positions, key=lambda x: float(np.linalg.norm(np.array(x.center - np.array(target_pos)))))
+            if place_positions:
+                target_location = min(place_positions, key=lambda x: float(np.linalg.norm(np.array(x.center - np.array(target_pos)))))
 
         # Get end-effector position
         ee_index = 6
