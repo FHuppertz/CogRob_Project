@@ -25,11 +25,9 @@ model_mapping = {
     "gpt-4.1-2025-04-14": "GPT-4.1",
     "claude-sonnet-4-20250514": "Claude Sonnet",
     "gemini-2.5-pro": "Gemini 2.5 Pro",
+    "deepseek-v3.1": "DeepSeek 3.1"
 }
 df['Model'] = df['Model'].map(model_mapping)
-
-# Conditionally adjust 'Toolcalls' based on 'Stopped' column
-df.loc[(df['Stopped'] == 1) & (df['Toolcalls'] > 0), 'Toolcalls'] -= 1
 
 # ============================
 # 2. PLOTTING FUNCTIONS
@@ -70,9 +68,13 @@ def create_grouped_boxplot(model_name, model_group):
     ax.grid(axis="y", linestyle="--", alpha=0.7)
 
     ytick_step_boxplot = 5
-    ymax = model_group['Toolcalls'].max()
-    yticks = [i for i in range(0, int(ymax) + 1, ytick_step_boxplot)]
-    ax.set_yticks(yticks)
+    # Check if model_group is empty to prevent errors
+    if not model_group.empty:
+      ymax = model_group['Toolcalls'].max()
+      yticks = [i for i in range(0, int(ymax) + 1, ytick_step_boxplot)]
+      ax.set_yticks(yticks)
+    else:
+      ax.set_yticks([])
 
     memory_states = sorted(model_group['Memory'].unique())
     tasks = sorted(model_group['Task'].unique())
@@ -88,22 +90,24 @@ def create_grouped_boxplot(model_name, model_group):
             plot_data.append(data)
             x_positions.append(i * group_width + j)
 
-    bplots = ax.boxplot(plot_data, positions=x_positions, widths=0.8, patch_artist=True)
-    colors = plt.cm.tab10.colors
-    for i in range(len(plot_data)):
-        bplots['boxes'][i].set_facecolor(colors[i % num_tasks])
+    # Only create boxplot if there is data to plot
+    if plot_data and any(len(d) > 0 for d in plot_data):
+        bplots = ax.boxplot(plot_data, positions=x_positions, widths=0.8, patch_artist=True)
+        colors = plt.cm.tab10.colors
+        for i in range(len(plot_data)):
+            bplots['boxes'][i].set_facecolor(colors[i % num_tasks])
 
-    for median in bplots['medians']:
-        median.set_color('black')
+        for median in bplots['medians']:
+            median.set_color('black')
 
-    for i, median in enumerate(bplots['medians']):
-        x_pos = x_positions[i]
-        y_pos = median.get_ydata()[0]
-        ax.text(x_pos, y_pos, f"{y_pos:.0f}",
-                ha='center', va='center', fontsize=10, color='white',
-                fontweight='bold', bbox=dict(facecolor='black', edgecolor='none', boxstyle='round,pad=0.2'))
+        for i, median in enumerate(bplots['medians']):
+            x_pos = x_positions[i]
+            y_pos = median.get_ydata()[0]
+            ax.text(x_pos, y_pos, f"{y_pos:.0f}",
+                    ha='center', va='center', fontsize=10, color='white',
+                    fontweight='bold', bbox=dict(facecolor='black', edgecolor='none', boxstyle='round,pad=0.2'))
 
-    ax.legend(handles=[bplots['boxes'][i] for i in range(num_tasks)], labels=tasks, title="Task")
+        ax.legend(handles=[bplots['boxes'][i] for i in range(num_tasks)], labels=tasks, title="Task")
 
     xtick_positions = [i * group_width + (num_tasks - 1) / 2 for i in range(len(memory_states))]
     ax.set_xticks(xtick_positions)
@@ -118,15 +122,26 @@ def create_violin_plot(data_df, x_col, value_col, title, filename):
     Generates and saves a violin plot to show the distribution of a variable.
     """
     plt.figure(figsize=(12, 7))
-    sns.violinplot(
-        x=x_col,
-        y=value_col,
-        hue="Task",
-        data=data_df,
-        split=True,
-        inner="quartile",
-        palette="pastel"
-    )
+    # Check if there are at least two unique hue levels to use `split`
+    if data_df['Task'].nunique() >= 2:
+      sns.violinplot(
+          x=x_col,
+          y=value_col,
+          hue="Task",
+          data=data_df,
+          split=True,
+          inner="quartile",
+          palette="pastel"
+      )
+    else:
+      sns.violinplot(
+          x=x_col,
+          y=value_col,
+          hue="Task",
+          data=data_df,
+          inner="quartile",
+          palette="pastel"
+      )
     plt.title(title)
     plt.xlabel(x_col)
     plt.ylabel(f"Distribution of {value_col}")
@@ -170,7 +185,7 @@ def create_confusion_heatmap(data_df, model_name, filename):
     row_sums = base_matrix.sum(axis=1)
     # Avoid division by zero for rows with no data by replacing sum with 1
     # where the sum is 0
-    row_sums[row_sums == 0] = 1 
+    row_sums[row_sums == 0] = 1
     normalized_matrix = base_matrix.div(row_sums, axis=0) * 100
 
     plt.figure(figsize=(8, 6))
@@ -189,6 +204,47 @@ def create_confusion_heatmap(data_df, model_name, filename):
     plt.savefig(os.path.join(plots_dir, filename), dpi=300)
     plt.close()
 
+def create_stopped_bar_plot(data_df, filename):
+    """
+    Generates a bar plot showing the percentage of stopped runs for each model, normalized to 100.
+    """
+    run_counts = data_df.groupby('Model').size().reset_index(name='Total Runs')
+    stopped_counts = data_df[data_df['Stopped'] == 1].groupby('Model').size().reset_index(name='Stopped Runs')
+
+    merged_counts = pd.merge(run_counts, stopped_counts, on='Model', how='left').fillna(0)
+    merged_counts['Non-Stopped Runs'] = merged_counts['Total Runs'] - merged_counts['Stopped Runs']
+
+    # Calculate percentages
+    merged_counts['Stopped %'] = (merged_counts['Stopped Runs'] / merged_counts['Total Runs']) * 100
+    merged_counts['Non-Stopped %'] = (merged_counts['Non-Stopped Runs'] / merged_counts['Total Runs']) * 100
+
+    merged_counts_p = merged_counts.set_index('Model')
+
+    ax = merged_counts_p[['Non-Stopped %', 'Stopped %']].plot(
+        kind='bar',
+        stacked=True,
+        figsize=(10, 6),
+        color=['#4CAF50', '#FF5722'],
+        title='Proportion of Stopped Runs per Model'
+    )
+
+    plt.xlabel("Model")
+    plt.ylabel("Proportion of Runs [%]")
+    plt.xticks(rotation=45, ha='right')
+    plt.legend(title="Run Status", labels=['Success', 'Stopped'])
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.ylim(0, 110)
+
+    # Add percentage labels
+    for container in ax.containers:
+        labels = [f"{h:.1f}%" if h > 0 else "" for h in container.datavalues]
+        ax.bar_label(container, labels=labels, label_type='center', color='white', fontweight='bold')
+
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, filename), dpi=300)
+    plt.close()
+
 
 # ============================
 # 3. MAIN EXECUTION
@@ -196,21 +252,33 @@ def create_confusion_heatmap(data_df, model_name, filename):
 def generate_all_plots(dataframe):
     print("Starting data analysis and plot generation.")
 
-    # Generate bar plots
+    # Create a filtered DataFrame excluding "Stopped" column
+    # (The confusion matrix filters internally)
+    filtered_df = dataframe[dataframe['Stopped'] != 1].copy()
+
+    # Generate the bar plot for stopped runs
+    print("Generating stopped runs bar plot.")
+    create_stopped_bar_plot(dataframe, "stopped_runs_proportion.png")
+
+    # Generate bar plots from the data
     for memory_state, mem_group in dataframe.groupby("Memory"):
-        print(f"Processing bar plots for Memory state: {memory_state}")
-        create_bar_plot(mem_group, "Accuracy", f"Mean Accuracy across Models and Tasks (Memory {memory_state})", 10, f"mean_accuracy_memory_{memory_state}.png")
+        print(f"Processing truth bar plots for Memory state: {memory_state}")
         create_bar_plot(mem_group, "Truth", f"Mean Truth across Models and Tasks (Memory {memory_state})", 10, f"mean_truth_memory_{memory_state}.png")
 
+    for memory_state, mem_group in filtered_df.groupby("Memory"):
+        print(f"Processing accuracy bar plots for Memory state: {memory_state}")
+        create_bar_plot(mem_group, "Accuracy", f"Mean Accuracy across Models and Tasks (Memory {memory_state})", 10, f"mean_accuracy_memory_{memory_state}.png")
     # Generate grouped boxplots and confusion heatmaps for each model
-    for model_name, model_group in dataframe.groupby("Model"):
+    for model_name, model_group in filtered_df.groupby("Model"):
         print(f"Generating plots for Model: {model_name}")
-        create_grouped_boxplot(model_name, model_group)
+        # Pass the filtered data for the boxplot
+        create_grouped_boxplot(model_name, model_group[model_group['Stopped'] != 1])
+        # The confusion heatmap filters the data internally
         create_confusion_heatmap(model_group, model_name, f"confusion_matrix_{model_name}.png")
 
     # Generate violin plot for each model
     print("\nGenerating violin plots for each model.")
-    for model_name, model_group in dataframe.groupby("Model"):
+    for model_name, model_group in filtered_df.groupby("Model"):
         create_violin_plot(
             model_group,
             "Memory",
