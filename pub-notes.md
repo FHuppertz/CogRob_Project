@@ -26,3 +26,11 @@ potential tasks:
 world:
     standard world
     randomized world (wish)
+
+
+Fact that models are trained for single task conversations, where at the end of the task, a new task is made with an empty context. Training so also means that models are sometimes even incapable of switching tasks in a single context. Tool calling is less common, and training environments often have agentic models performing one task at a time. But for an embodied cognitive agent, it becomes important to be able to keep the world in context and perform multiple tasks in it.
+
+
+Devstral would never pick up the box, and prompting it with "Put away the mug, cube and box into the shelf." does not help, as it gets into a loop of being short sighted and always putting things on the floor to pick up the next item it comes across, and almost never into the shelf. Even on calling the end_task tool, it would never stop the turn and keep on infinitely generating.
+
+Update: Devstral seems to prefer just two items at a time. Sometimes the mug and the cube, or the cube and the box, and so on.
