@@ -27,9 +27,9 @@
 \node[component, fill=yellow!15] (user) at (0,9) {User\\Task Provider};
 
 % Cognitive Layer Components
-\node[cognitive, below of=user, node distance=3cm] (llm) {LLM Cognitive Core\\ChatAgent};
-\node[memory, left of=llm, node distance=5cm] (memory) {Episodic Memory\\ChromaDB Storage};
-\node[memory, right of=llm, node distance=5cm] (scratchpad) {Working Memory\\Scratchpad};
+\node[cognitive, below of=user, node distance=3cm] (llm) {LLM Cognitive Core};
+\node[memory, left of=llm, node distance=5cm] (memory) {Episodic Memory};
+\node[memory, right of=llm, node distance=5cm] (scratchpad) {Working Memory\\(Scratchpad)};
 
 % Interface Layer Components
 \node[interface, below of=llm, node distance=3cm] (toolkit) {Robot Toolkit};
@@ -47,7 +47,7 @@
 \draw[dataflow] (scratchpad) to [bend left=20] node[below, font=\scriptsize] {} (llm);
 
 % Connection from User to LLM (Task Input)
-\draw[controlflow] (user) to [bend left=15] node[above, font=\scriptsize] {Task\\Prompt} (llm);
+\draw[controlflow] (user) to [bend left=15] node[right, font=\scriptsize] {Task\\Prompt} (llm);
 
 % Connections from Cognitive to Interface
 \draw[controlflow] (llm) to [bend left=15] node[right, font=\scriptsize, align=left] {Tool\\Selection} (toolkit);
@@ -58,11 +58,11 @@
 \draw[controlflow] (toolkit) to [bend left=15] node[right, font=\scriptsize] {Action\\Commands} (robot);
 
 % Connections from Execution to Environment
-\draw[controlflow] (robot) to [bend left=15] node[right, font=\scriptsize] {Physics\\Interaction} (simulation);
+\draw[controlflow] (robot) to [bend left=15] node[above, font=\scriptsize] {Physics\\Interaction} (simulation);
 
 % Feedback connections (Environment -> Execution -> Interface -> Cognitive)
-\draw[dataflow, dashed] (robot.north) to [bend left=15] node[right, font=\scriptsize] {Action\\Results} (toolkit.south);
-\draw[dataflow, dashed] (toolkit.north) to [bend left=15] node[above right, font=\scriptsize, pos=0.25] {Tool\\Responses} (llm.south);
+\draw[dataflow, dashed] (robot.north) to [bend left=15] node[left, font=\scriptsize] {Action\\Results} (toolkit.south);
+\draw[dataflow, dashed] (toolkit.north) to [bend left=15] node[left, font=\scriptsize, pos=0.5] {Tool\\Responses} (llm.south);
 
 % Tool details (around toolkit)
 % \node[below=0.3cm of toolkit, font=\scriptsize\sffamily, align=center] (tools) {
@@ -77,17 +77,22 @@
 %     \end{tabular}
 % };
 
+% Annotations
+\node[above=0.25cm of llm, font=\scriptsize\sffamily, align=center] (reasoning) {Reasoning\\Decision Making};
+\node[below=0.1cm of memory, font=\scriptsize\sffamily, align=center] (experience) {Experience\\Storage};
+\node[below=0.1cm of scratchpad, font=\scriptsize\sffamily, align=center] (planning) {Planning \&\\Reflection};
+
 % Define layers with background rectangles that automatically resize
 \begin{scope}[on background layer]
-    \node[fill=green!5, rounded corners, fit=(llm) (memory) (scratchpad), inner sep=10pt, label={[label]above:Cognitive Layer}] (cognitivelayer) {};
-    \node[fill=orange!5, rounded corners, fit=(toolkit), inner sep=10pt, label={[label]above:Interface Layer}] (interfacelayer) {};
-    \node[fill=red!5, rounded corners, fit=(robot) (simulation), inner sep=10pt, label={[label]above:Execution Layer}] (executionlayer) {};
+    \node[fill=green!5, rounded corners, fit=(llm) (memory) (scratchpad) (reasoning) (experience) (planning), inner sep=15pt] (cognitivelayer) {};
+    \node[fill=orange!5, rounded corners, fit=(toolkit), inner sep=15pt] (interfacelayer) {};
+    \node[fill=red!5, rounded corners, fit=(robot) (simulation), inner sep=15pt] (executionlayer) {};
+    % Explicit layer labels at top left corners
+    \node[label, anchor=north west] at (cognitivelayer.north west) {Cognitive Layer};
+    \node[label, anchor=north west] at (interfacelayer.north west) {Interface Layer};
+    \node[label, anchor=north west] at (executionlayer.north west) {Execution Layer};
 \end{scope}
 
-% Annotations
-\node[above=0.25cm of llm, font=\scriptsize\sffamily, align=center] {Reasoning\\Decision Making};
-\node[above=0.25cm of memory, font=\scriptsize\sffamily, align=center] {Experience\\Storage};
-\node[above=0.25cm of scratchpad, font=\scriptsize\sffamily, align=center] {Planning \&\\Reflection};
 
 % Legend
 \node[draw, rounded corners, fill=white, align=left, font=\scriptsize, anchor=north east] at ($(current bounding box.south east)+(-0.5,0.5)$) {
