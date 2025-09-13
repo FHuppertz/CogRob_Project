@@ -21,11 +21,11 @@ except FileNotFoundError:
 
 # Map long model names to shorter names
 model_mapping = {
-    "qwen3-coder-480b-a35b-instruct": "Qwen3 Coder",
+    "qwen3-coder-480b-a35b-instruct": "Qwen3 Coder 480B",
     "gpt-4.1-2025-04-14": "GPT-4.1",
-    "claude-sonnet-4-20250514": "Claude Sonnet",
+    "claude-sonnet-4-20250514": "Claude 4 Sonnet",
     "gemini-2.5-pro": "Gemini 2.5 Pro",
-    "deepseek-v3.1": "DeepSeek 3.1"
+    "deepseek-v3.1": "DeepSeek V3.1"
 }
 df['Model'] = df['Model'].map(model_mapping)
 
@@ -274,7 +274,7 @@ def generate_all_plots(dataframe):
         # Pass the filtered data for the boxplot
         create_grouped_boxplot(model_name, model_group[model_group['Stopped'] != 1])
         # The confusion heatmap filters the data internally
-        create_confusion_heatmap(model_group, model_name, f"confusion_matrix_{model_name}.png")
+        create_confusion_heatmap(model_group, model_name, f"confusion_matrix_{model_name.replace(' ', '_')}.png")
 
     # Generate violin plot for each model
     print("\nGenerating violin plots for each model.")
