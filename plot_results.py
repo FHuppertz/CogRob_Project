@@ -263,11 +263,11 @@ def generate_all_plots(dataframe):
     # Generate bar plots from the data - grouped by model
     for model_name, model_group in dataframe.groupby("Model"):
         print(f"Processing truth bar plots for Model: {model_name}")
-        create_bar_plot(model_group, "Truth", f"Mean Truth across Memory States and Tasks for {model_name}", 10, f"mean_truth_model_{model_name.replace(' ', '_')}.png", groupby_cols=["Memory", "Task"])
+        create_bar_plot(model_group, "Truth", f"Mean Ground Truth across Tasks and Memory States for {model_name}", 10, f"mean_truth_model_{model_name.replace(' ', '_')}.png", groupby_cols=["Task", "Memory"])
 
-    for model_name, model_group in filtered_df.groupby("Model"):
-        print(f"Processing accuracy bar plots for Model: {model_name}")
-        create_bar_plot(model_group, "Accuracy", f"Mean Accuracy across Memory States and Tasks for {model_name}", 10, f"mean_accuracy_model_{model_name.replace(' ', '_')}.png", groupby_cols=["Memory", "Task"])
+    # for model_name, model_group in filtered_df.groupby("Model"):
+    #     print(f"Processing accuracy bar plots for Model: {model_name}")
+    #     create_bar_plot(model_group, "Accuracy", f"Mean Accuracy across Tasks and Memory States for {model_name}", 10, f"mean_accuracy_model_{model_name.replace(' ', '_')}.png", groupby_cols=["Task", "Memory"])
 
     # Generate grouped boxplots and confusion heatmaps for each model
     for model_name, model_group in filtered_df.groupby("Model"):
