@@ -188,7 +188,7 @@ def create_confusion_heatmap(data_df, model_name, filename):
     row_sums[row_sums == 0] = 1
     normalized_matrix = base_matrix.div(row_sums, axis=0) * 100
 
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(4, 4))
     sns.heatmap(
         normalized_matrix,
         annot=True,
@@ -287,6 +287,9 @@ def generate_all_plots(dataframe):
             f"toolcalls_violin_plot_{model_name}.png"
         )
     print("Plot generation complete. Check the 'plots' directory for your images.")
+
+
+    create_bar_plot(dataframe, "Truth", "Mean Truth across Models and Tasks", 10, "mean_truth_total.png")
 
 # Run the plot generation
 generate_all_plots(df)
