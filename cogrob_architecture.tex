@@ -13,7 +13,7 @@
     cognitive/.style={component, fill=green!15},
     interface/.style={component, fill=orange!15},
     execution/.style={component, fill=red!15},
-    environment/.style={component, fill=purple!15},
+    simulation/.style={component, fill=purple!15},
     arrow/.style={->, >=stealth, thick},
     bentarrow/.style={arrow, bend left=15},
     dataflow/.style={bentarrow, blue},
@@ -27,42 +27,50 @@
 \node[component, fill=yellow!15] (user) at (0,9) {User\\Task Provider};
 
 % Cognitive Layer Components
-\node[cognitive, below of=user, node distance=3cm] (llm) {LLM Cognitive Core};
-\node[memory, left of=llm, node distance=5cm] (memory) {Episodic Memory};
-\node[memory, right of=llm, node distance=5cm] (scratchpad) {Working Memory\\(Scratchpad)};
+\node[cognitive, below of=user, node distance=2.5cm] (llm) {LLM Cognitive Core};
 
-% Interface Layer Components
+% Technically not part of the cognitive layer, but needs to be defined here
 \node[interface, below of=llm, node distance=3cm] (toolkit) {Robot Toolkit};
 
-% Execution Layer Components
-\node[execution, below left of=toolkit, node distance=4cm and 4cm] (robot) {Robot};
+% Memory compontents
+\node[memory, left of=toolkit, node distance=5.75cm] (memory) {Episodic Memory};
+\node[memory, right of=toolkit, node distance=5.75cm] (scratchpad) {Working Memory\\(Scratchpad)};
 
-% Environment Layer Components
-\node[environment, below right of=toolkit, node distance=4cm and 4cm] (simulation) {World Simulation\\(PyBullet)};
+% Interface Layer Components
+
+% Execution Layer Components
+\node[execution, below left of=toolkit, node distance=4.5cm] (robot) {Robot};
+
+% Simulation Layer Components
+\node[simulation, below right of=toolkit, node distance=4.5cm] (simulation) {World Simulation\\(PyBullet)};
 
 % Connections within Cognitive Layer
-\draw[dataflow] (llm) to [bend left=20] node[above, font=\scriptsize] {} (memory);
-\draw[dataflow] (memory) to [bend left=20] node[below, font=\scriptsize] {} (llm);
-\draw[dataflow] (llm) to [bend left=20] node[above, font=\scriptsize] {} (scratchpad);
-\draw[dataflow] (scratchpad) to [bend left=20] node[below, font=\scriptsize] {} (llm);
+\draw[dataflow] (toolkit) to [bend right=20] node[below, font=\scriptsize] {Memory Tools} (memory);
+\draw[memoryflow] (memory) to [bend right=20] node[above, font=\scriptsize] {Search Memory} (toolkit);
+\draw[dataflow] (toolkit) to [bend left=20] node[below, font=\scriptsize] {Scratchpad Tools} (scratchpad);
+\draw[memoryflow] (scratchpad) to [bend left=20] node[above, font=\scriptsize] {View Scratchpad} (toolkit);
 
 % Connection from User to LLM (Task Input)
-\draw[controlflow] (user) to [bend left=15] node[right, font=\scriptsize] {Task\\Prompt} (llm);
+\draw[controlflow] (user) to [bend left=0] node[right, font=\scriptsize] {Task Prompt} (llm);
 
 % Connections from Cognitive to Interface
-\draw[controlflow] (llm) to [bend left=15] node[right, font=\scriptsize, align=left] {Tool\\Selection} (toolkit);
+\draw[controlflow] (llm) to [bend left=15] node[right, font=\scriptsize, align=left] {Tool Selection} (toolkit);
+\draw[dataflow, dashed] (toolkit) to [bend left=15] node[left, font=\scriptsize, pos=0.5] {Tool Responses} (llm);
 % \draw[memoryflow] (memory.south) -- ++(0,-0.5) -| node[above right, font=\scriptsize, pos=0.25] {Memory\\Access} (toolkit.north);
 % \draw[memoryflow] (scratchpad.south) -- ++(0,-0.5) -| node[above left, font=\scriptsize, pos=0.25] {Reasoning\\Data} (toolkit.north);
 
 % Connections from Interface to Execution
-\draw[controlflow] (toolkit) to [bend left=15] node[right, font=\scriptsize] {Action\\Commands} (robot);
+\draw[controlflow] (toolkit) to [bend left=15] node[right, font=\scriptsize, pos=0.4] {Action Tools} (robot);
+\draw[dataflow, dashed] (robot) to [bend left=15] node[left, font=\scriptsize, align=right] {Action Responses} (toolkit);
 
-% Connections from Execution to Environment
-\draw[controlflow] (robot) to [bend left=15] node[above, font=\scriptsize] {Physics\\Interaction} (simulation);
+% Connections from Execution to Simulation
+% \draw[controlflow] (robot) to [bend left=15] node[above, font=\scriptsize] {Physics\\Interaction} (simulation);
 
-% Feedback connections (Environment -> Execution -> Interface -> Cognitive)
-\draw[dataflow, dashed] (robot.north) to [bend left=15] node[left, font=\scriptsize] {Action\\Results} (toolkit.south);
-\draw[dataflow, dashed] (toolkit.north) to [bend left=15] node[left, font=\scriptsize, pos=0.5] {Tool\\Responses} (llm.south);
+% Feedback connections (simulation -> Execution -> Interface -> Cognitive)
+
+% Perception tools
+\draw[dataflow, dashed] (simulation) to [bend left=15] node[left, font=\scriptsize, align=right, pos=0.25] {Perception Responses} (toolkit);
+\draw[dataflow] (toolkit) to [bend left=15] node[right, font=\scriptsize, pos=0.5] {Perception Tools} (simulation);
 
 % Tool details (around toolkit)
 % \node[below=0.3cm of toolkit, font=\scriptsize\sffamily, align=center] (tools) {
@@ -78,7 +86,7 @@
 % };
 
 % Annotations
-\node[above=0.25cm of llm, font=\scriptsize\sffamily, align=center] (reasoning) {Reasoning\\Decision Making};
+\node[left=0.1cm of llm, font=\scriptsize\sffamily, align=center] (reasoning) {Reasoning\\Decision Making};
 \node[below=0.1cm of memory, font=\scriptsize\sffamily, align=center] (experience) {Experience\\Storage};
 \node[below=0.1cm of scratchpad, font=\scriptsize\sffamily, align=center] (planning) {Planning \&\\Reflection};
 
@@ -88,14 +96,14 @@
     \node[fill=orange!5, rounded corners, fit=(toolkit), inner sep=15pt] (interfacelayer) {};
     \node[fill=red!5, rounded corners, fit=(robot) (simulation), inner sep=15pt] (executionlayer) {};
     % Explicit layer labels at top left corners
-    \node[label, anchor=north west] at (cognitivelayer.north west) {Cognitive Layer};
-    \node[label, anchor=north west] at (interfacelayer.north west) {Interface Layer};
-    \node[label, anchor=north west] at (executionlayer.north west) {Execution Layer};
+    \node[label, anchor=north west] at (cognitivelayer.north west) {Cognitive System};
+    \node[label, anchor=north west] at (interfacelayer.north west) {Interface};
+    \node[label, anchor=north west] at (executionlayer.north west) {Execution};
 \end{scope}
 
 
 % Legend
-\node[draw, rounded corners, fill=white, align=left, font=\scriptsize, anchor=north east] at ($(current bounding box.south east)+(-0.5,0.5)$) {
+\node[draw, rounded corners, fill=white, align=left, font=\scriptsize, anchor=north east] at ($(current bounding box.south east)+(0,-0.5)$) {
     \tikz\draw[dataflow] (0,0) -- (0.5,0); Data Flow\\
     \tikz\draw[controlflow] (0,0) -- (0.5,0); Control Flow\\
     \tikz\draw[memoryflow] (0,0) -- (0.5,0); Memory Access\\
