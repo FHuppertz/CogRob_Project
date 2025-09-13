@@ -32,18 +32,18 @@ df['Model'] = df['Model'].map(model_mapping)
 # ============================
 # 2. PLOTTING FUNCTIONS
 # ============================
-def create_bar_plot(data, value_col, title, ytick_step, filename):
+def create_bar_plot(data, value_col, title, ytick_step, filename, groupby_cols=["Model", "Task"]):
     """
     Generates and saves a bar plot for a given value column.
     """
-    ax = (data.groupby(["Model", "Task"])[value_col].mean() * 100).unstack().plot(
+    ax = (data.groupby(groupby_cols)[value_col].mean() * 100).unstack().plot(
         kind="bar",
         figsize=(10, 6),
         title=title
     )
-    plt.xlabel("Model")
+    plt.xlabel(groupby_cols[0])
     plt.ylabel(f"Mean {value_col} [%]")
-    plt.legend(title="Task")
+    plt.legend(title=groupby_cols[1] if len(groupby_cols) > 1 else "Category")
 
     yticks = [i for i in range(0, 101, ytick_step)]
     plt.yticks(yticks)
@@ -260,14 +260,15 @@ def generate_all_plots(dataframe):
     print("Generating stopped runs bar plot.")
     create_stopped_bar_plot(dataframe, "stopped_runs_proportion.png")
 
-    # Generate bar plots from the data
-    for memory_state, mem_group in dataframe.groupby("Memory"):
-        print(f"Processing truth bar plots for Memory state: {memory_state}")
-        create_bar_plot(mem_group, "Truth", f"Mean Truth across Models and Tasks (Memory {memory_state})", 10, f"mean_truth_memory_{memory_state}.png")
+    # Generate bar plots from the data - grouped by model
+    for model_name, model_group in dataframe.groupby("Model"):
+        print(f"Processing truth bar plots for Model: {model_name}")
+        create_bar_plot(model_group, "Truth", f"Mean Truth across Memory States and Tasks for {model_name}", 10, f"mean_truth_model_{model_name.replace(' ', '_')}.png", groupby_cols=["Memory", "Task"])
 
-    for memory_state, mem_group in filtered_df.groupby("Memory"):
-        print(f"Processing accuracy bar plots for Memory state: {memory_state}")
-        create_bar_plot(mem_group, "Accuracy", f"Mean Accuracy across Models and Tasks (Memory {memory_state})", 10, f"mean_accuracy_memory_{memory_state}.png")
+    for model_name, model_group in filtered_df.groupby("Model"):
+        print(f"Processing accuracy bar plots for Model: {model_name}")
+        create_bar_plot(model_group, "Accuracy", f"Mean Accuracy across Memory States and Tasks for {model_name}", 10, f"mean_accuracy_model_{model_name.replace(' ', '_')}.png", groupby_cols=["Memory", "Task"])
+
     # Generate grouped boxplots and confusion heatmaps for each model
     for model_name, model_group in filtered_df.groupby("Model"):
         print(f"Generating plots for Model: {model_name}")
